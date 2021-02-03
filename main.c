@@ -5,39 +5,50 @@
 #include "move.h"
 
 
-#include "linkedlist.h"
+#include "linkedlist.def.h"
+
+typedef Move* MovePTR;
+
+LListDeclareDefine(int);
+
+LListDeclareDefine(float)
+
+
+
 
 int main() {
 
-//    Position fen = CreatePositionFromFEN("r1bq2nr/1pppp1pp/p1n3b1/3k1p2/1N2Q3/3P1K2/PPP1PPPP/RNB2B1R w - - 0 1");
-//
-//    PositionDebugPrint(&fen);
-//
-//    fen.en_passant = (Coord){FILE_F, ROW_6};
-//
-//    //DiagonalMove(&fen, (Coord){FILE_E, ROW_4}, BLACK);
-//    //CrossMove(&fen, (Coord){FILE_E, ROW_4}, BLACK);
-//    //KnightMove(&fen, (Coord){FILE_B, ROW_4}, BLACK);
-//    //printf("-\n");
-//
-//
-//    KingMove(&fen, (Coord){FILE_E, ROW_1}, WHITE);
+    LListCreate(int, test);
 
+    LListAppendData(int)(&test, 5);
+    LListAppendData(int)(&test, 9);
 
-    LListCreate(test);
-
-    LListAppendData(&test, 6);
-    LListAppendData(&test, 2);
-    LListAppendData(&test, 5);
-    LListAppendData(&test, 6);
-    LListAppendData(&test, 8);
-
-
-    LListFOR(elem, test)
+    LListFOR(int, el, test)
     {
-        printf("%d\n", elem);
+        printf("%d\n", el);
     }
 
-    LListFree(&test);
+    LListCreate(float, floatlist);
+
+    LListAppendData(float)(&floatlist, 5.234);
+    LListAppendData(float)(&floatlist, 3.1415);
+
+
+    LListFOR(float, flel, floatlist)
+    {
+        printf("%f\n", flel);
+    }
+
+
+    LListFreeNodes(int)(&test);
+    LListFreeNodes(float)(&floatlist);
+
+    int i=0;
+    LListFOR(float, l, floatlist)
+    {
+        printf("%d\n", i++);
+    }
+
+
     return 0;
 }
