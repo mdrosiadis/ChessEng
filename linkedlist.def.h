@@ -10,8 +10,11 @@
 #define LListFreeData(DATATYPE) LList_##DATATYPE##_FreeData
 
 #define LListFOR(DATATYPE, elem, list) \
-DATATYPE elem; \
 for(Node_##DATATYPE *node = list.head; node && ((elem = node->data) || 1) ; node = node->next)
+
+#define LListFORPTR(DATATYPE, elem, list) \
+for(Node_##DATATYPE *node = list.head; node && ((elem = & (node->data)) || 1) ; node = node->next)
+
 
 #define LListDeclarations(DATATYPE) \
 typedef struct node_##DATATYPE \

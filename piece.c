@@ -15,7 +15,6 @@ const PieceData PIECE_DATA[] =
     {'.', 0, {0, 0, 0, 0, 0}}
 };
 
-
 char PieceFENChar(Piece* p)
 {
     return p->color == WHITE ? PIECE_SYMBOLS[p->type] : tolower(PIECE_SYMBOLS[p->type]);
@@ -31,6 +30,6 @@ Piece PieceFromFENChar(char FENChar)
             return (Piece){i,  isupper(FENChar) ? WHITE : BLACK};
     }
 
-    return  NOPIECE_LITERAL;
+    return  NO_PIECE_LITERAL;
 }
 

@@ -1,54 +1,30 @@
 #include <stdio.h>
 
-#include "piece.h"
 #include "position.h"
-#include "move.h"
-
-
-#include "linkedlist.def.h"
-
-typedef Move* MovePTR;
-
-LListDeclareDefine(int);
-
-LListDeclareDefine(float)
-
-
 
 
 int main() {
 
-    LListCreate(int, test);
 
-    LListAppendData(int)(&test, 5);
-    LListAppendData(int)(&test, 9);
+    Position fen = CreatePositionFromFEN("r1b2bnr/p1pnpppp/1p6/2k1Q3/4N3/q3B3/PPPPPPPP/RN1KKB1R w - - 0 1");
 
-    LListFOR(int, el, test)
+    PositionDebugPrint(&fen);
+    Coord* coord;
+    printf("White\n");
+    LListFORPTR(Coord, coord, CoordsTargetingCoord(&fen, (Coord){FILE_C, ROW_5}, WHITE))
     {
-        printf("%d\n", el);
+        PrintCoordAlgebraic(*coord);
+        printf("\n");
+
     }
 
-    LListCreate(float, floatlist);
-
-    LListAppendData(float)(&floatlist, 5.234);
-    LListAppendData(float)(&floatlist, 3.1415);
-
-
-    LListFOR(float, flel, floatlist)
+    printf("Black\n");
+    LListFORPTR(Coord, coord, CoordsTargetingCoord(&fen, (Coord){FILE_C, ROW_5}, BLACK))
     {
-        printf("%f\n", flel);
+        PrintCoordAlgebraic(*coord);
+        printf("\n");
+
     }
-
-
-    LListFreeNodes(int)(&test);
-    LListFreeNodes(float)(&floatlist);
-
-    int i=0;
-    LListFOR(float, l, floatlist)
-    {
-        printf("%d\n", i++);
-    }
-
 
     return 0;
 }

@@ -3,18 +3,25 @@
 
 #include <stdbool.h>
 
-#include "position.h"
 #include "coord.h"
-#include "piece.h"
+#include "position.h"
+#include "move.h"
 
-#define MAX_ALGREBRAIC_NOTATION_STRING 11
+#include "linkedlist.def.h"
+
+
+
+#define MAX_ALGEBRAIC_NOTATION_STRING 11
+#define N_MOVE_TYPES 5
+
+
 
 typedef struct move
 {
     Coord from;
     Coord to;
 
-    char algebraicNotation[MAX_ALGREBRAIC_NOTATION_STRING];
+    char algebraicNotation[MAX_ALGEBRAIC_NOTATION_STRING];
 
     // easy way around en passant
     bool isCapture;
@@ -22,12 +29,18 @@ typedef struct move
 } Move;
 
 
+typedef enum move_type{MOVE_DIAGONAL, MOVE_CROSS, MOVE_KNIGHT, MOVE_PAWN, MOVE_KING} MoveType;
 
-void DiagonalMove(Position* pos, Coord from, PieceColor color);
-void CrossMove(Position* pos, Coord from, PieceColor color);
-void KnightMove(Position* pos, Coord from, PieceColor color);
-void PawnMove(Position* pos, Coord from, PieceColor color);
-void KingMove(Position* pos, Coord from, PieceColor color);
+LListDeclarations(Move)
 
+extern LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(Position*, Coord, PieceColor);
+
+LList(Move) DiagonalMove(Position* pos, Coord from, PieceColor color);
+LList(Move) CrossMove(Position* pos, Coord from, PieceColor color);
+LList(Move) KnightMove(Position* pos, Coord from, PieceColor color);
+LList(Move) PawnMove(Position* pos, Coord from, PieceColor color);
+LList(Move) KingMove(Position* pos, Coord from, PieceColor color);
+
+void DebugPrintMove(Move* move);
 
 #endif //CHEESENG_MOVE_H

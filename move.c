@@ -1,13 +1,22 @@
+#include <stdio.h>
+
 #include "move.h"
-#include "coord.h"
+
+LListDefinitions(Move)
 
 static Coord DIAGONAL_DIRECTIONS[] = {{-1, -1}, {1, 1}, {-1, 1}, {1, -1}};
 static Coord CROSS_DIRECTIONS[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 static Coord KNIGHT_MOVES[] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
 
+LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(Position*, Coord, PieceColor) =
+        {DiagonalMove, CrossMove, KnightMove, PawnMove, KingMove};
+
 #define COORD_ADD_SELF(a, b) a.file+=b.file, a.row+=b.row
+// temporary
+#define DebugPrintCoordFull(h) (h)
 
 #define LINE_MOVES(DIRSET) \
+    LListCreate(Move, moves);\
     for(int dir = 0; dir < 4; dir++) \
     { \
         Coord current = from;\
@@ -20,9 +29,11 @@ static Coord KNIGHT_MOVES[] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, 
             if(pieceAtCurrent->type != NO_PIECE) \
             { \
 \
-                if(pieceAtCurrent->color != color && pieceAtCurrent->type != KING) \
+                if(pieceAtCurrent->color != color) \
                 { \
-                    DebugPrintCoord(current);\
+                    DebugPrintCoordFull(current); \
+                    Move newMove = {.from = from, .to = current, .isCapture = true, .captureSquare = current};\
+                    LListAppendData(Move)(&moves, newMove); \
                 } \
 \
 \
@@ -30,23 +41,27 @@ static Coord KNIGHT_MOVES[] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, 
             } \
 \
             /* Otherwise, we can make a regular move on square current */ \
-            DebugPrintCoord(current); \
+            DebugPrintCoordFull(current);\
+            Move newMove = {.from = from, .to = current, .isCapture = false};\
+            LListAppendData(Move)(&moves, newMove); \
         } \
-    }
+    } \
+    return moves;
 
-void DiagonalMove(Position* pos, Coord from, PieceColor color)
+LList(Move) DiagonalMove(Position* pos, Coord from, PieceColor color)
 {
     LINE_MOVES(DIAGONAL_DIRECTIONS)
 }
 
-void CrossMove(Position* pos, Coord from, PieceColor color)
+LList(Move) CrossMove(Position* pos, Coord from, PieceColor color)
 {
     LINE_MOVES(CROSS_DIRECTIONS)
 }
 
 
-void KnightMove(Position* pos, Coord from, PieceColor color)
+LList(Move) KnightMove(Position* pos, Coord from, PieceColor color)
 {
+    LListCreate(Move, moves);
     for(int move=0; move < 8; move++)
     {
         Coord current = from;
@@ -57,15 +72,20 @@ void KnightMove(Position* pos, Coord from, PieceColor color)
 
         Piece* pieceAtCurrent = getPieceAtCoord(pos, current);
 
-        if(pieceAtCurrent->type == NO_PIECE || (pieceAtCurrent->color != color && pieceAtCurrent->type != KING))
+        if(pieceAtCurrent->type == NO_PIECE || pieceAtCurrent->color != color)
         {
-            DebugPrintCoord(current);
+            DebugPrintCoordFull(current);
+            Move newMove = {.from = from, .to = current, .isCapture = (pieceAtCurrent->type != NO_PIECE), .captureSquare = current};
+            LListAppendData(Move)(&moves, newMove);
         }
     }
+
+    return moves;
 }
 
-void PawnMove(Position* pos, Coord from, PieceColor color)
+LList(Move) PawnMove(Position* pos, Coord from, PieceColor color)
 {
+    LListCreate(Move, moves);
     int movingDirection = (color == WHITE) ? 1 : -1;
     CoordRow pawnStartingPosition = (color ==  WHITE) ? ROW_2 : ROW_7;
     Coord captures[] = {{-1, movingDirection}, {1, movingDirection}};
@@ -82,7 +102,9 @@ void PawnMove(Position* pos, Coord from, PieceColor color)
 
         if(pieceAtCurrent->type != NO_PIECE) break;
 
-        DebugPrintCoord(current);
+        DebugPrintCoordFull(current);
+        Move newMove = {.from = from, .to = current, .isCapture = false};
+        LListAppendData(Move)(&moves, newMove);
 
     }
 
@@ -96,18 +118,28 @@ void PawnMove(Position* pos, Coord from, PieceColor color)
 
         Piece* pieceAtCurrent = getPieceAtCoord(pos, current);
 
-        if(pieceAtCurrent->type != NO_PIECE && pieceAtCurrent->color != color && pieceAtCurrent->type != KING ||
-           COORD_EQUALS(current, pos->en_passant) && pieceAtCurrent->type == NO_PIECE && color == pos->color_playing) //en passant
+        if(pieceAtCurrent->type != NO_PIECE && pieceAtCurrent->color != color)
         {
-            DebugPrintCoord(current);
+            DebugPrintCoordFull(current);
+            Move newMove = {.from = from, .to = current, .isCapture = true, .captureSquare = current};
+            LListAppendData(Move)(&moves, newMove);
+        }
+        else if(COORD_EQUALS(current, pos->en_passant) && pieceAtCurrent->type == NO_PIECE && color == pos->color_playing) //en passant
+        {
+            Coord enPassantCaptureSquare = {pos->en_passant.file, pos->en_passant.row - movingDirection};
+            DebugPrintCoordFull(current);
+            Move newMove = {.from = from, .to = current, .isCapture = true, .captureSquare = enPassantCaptureSquare};
+            LListAppendData(Move)(&moves, newMove);
         }
     }
 
-
-
+    return moves;
 }
-void KingMove(Position* pos, Coord from, PieceColor color)
+
+
+LList(Move) KingMove(Position* pos, Coord from, PieceColor color)
 {
+    LListCreate(Move, moves);
     Coord current;
     for(int file=-1; file <= 1; file++)
         for(int row=-1; row <= 1; row++)
@@ -120,11 +152,30 @@ void KingMove(Position* pos, Coord from, PieceColor color)
 
             Piece* pieceAtCurrent = getPieceAtCoord(pos, current);
 
-            if(pieceAtCurrent->type == NO_PIECE || pieceAtCurrent->color != color && pieceAtCurrent->type != KING)
+            if(pieceAtCurrent->type == NO_PIECE || pieceAtCurrent->color != color)
             {
-                DebugPrintCoord(current);
+                DebugPrintCoordFull(current);
+                Move newMove = {.from = from, .to = current, .isCapture = (pieceAtCurrent->type != NO_PIECE), .captureSquare = current};
+                LListAppendData(Move)(&moves, newMove);
             }
 
-
         }
+
+    return moves;
+}
+
+
+void DebugPrintMove(Move* move)
+{
+    PrintCoordAlgebraic(move->from);
+    printf(" - ");
+    PrintCoordAlgebraic(move->to);
+
+    if(move->isCapture)
+    {
+        printf(" x at ");
+        PrintCoordAlgebraic(move->captureSquare);
+    }
+
+    printf("\n");
 }

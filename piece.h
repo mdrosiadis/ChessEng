@@ -5,24 +5,17 @@
 
 
 typedef enum PieceType{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE} PieceType;
-typedef enum Color{WHITE, BLACK, NO_COLOR} PieceColor;
+typedef enum PieceColor{WHITE, BLACK, NO_COLOR} PieceColor;
 
-typedef struct PieceMoveTypes
-{
-    bool diagonal: 1;
-    bool cross   : 1;
-    bool knight  : 1;
-    bool pawn    : 1;
-    bool king    : 1;
-} PieceMoveTypes;
+#define OTHER_COLOR(color) ((color == WHITE) ? BLACK : WHITE)
+
 
 typedef struct PieceData
 {
     char symbol;
     int value;
-    PieceMoveTypes move_types;
+    bool moveTypes[5];
 } PieceData;
-
 
 
 typedef struct Piece
@@ -31,7 +24,9 @@ typedef struct Piece
     PieceColor color;
 } Piece;
 
-#define NOPIECE_LITERAL (Piece){NO_PIECE, NO_COLOR}
+#define NO_PIECE_LITERAL (Piece){NO_PIECE, NO_COLOR}
+
+extern const PieceData PIECE_DATA[];
 
 char PieceFENChar(Piece* p);
 Piece PieceFromFENChar(char FENChar);

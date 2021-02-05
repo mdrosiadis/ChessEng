@@ -5,11 +5,14 @@
 
 #include "piece.h"
 #include "coord.h"
+#include "linkedlist.def.h"
+
+LListDeclarations(Coord)
+
 
 #define BOARD_SIZE 8
 #define MAX_PIECES 32
 #define PLAYER_COUNT 2
-
 
 
 typedef struct position
@@ -24,9 +27,14 @@ typedef struct position
 
 } Position;
 
-Piece* getPieceAtCoord(Position* pos, Coord coord);
 
+
+Piece* getPieceAtCoord(Position* pos, Coord coord);
 Position CreatePositionFromFEN(char* FEN);
+//bool makeMove(Position* pos, Move* move);
+LList(Coord) CoordsTargetingCoord(Position* pos, Coord target, PieceColor color);
+bool isPositionLegal(Position* pos);
+void getLegalMoves(Position* pos);
 
 void PositionDebugPrint(Position* pos);
 
