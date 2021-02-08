@@ -4,7 +4,6 @@
 
 #include "position.h"
 #include "move.h"
-#include "linkedlist.def.h"
 
 LListDefinitions(Coord)
 
@@ -62,9 +61,8 @@ Position CreatePositionFromFEN(char* FEN)
 
     // skip space
     assert(row == 0 && file == BOARD_SIZE);
-
-    assert(*FEN++ == ' ');
-
+    assert(*FEN == ' ');
+    FEN++;
     // turn
 
     switch(*FEN++)
@@ -90,30 +88,37 @@ Piece* getPieceAtCoord(Position* pos, Coord coord)
 //    // make move, check if is legal, return true on success
 //}
 
-
-LList(Coord) CoordsTargetingCoord(Position* pos, Coord target, PieceColor color)
+// Utility Function: Get the number (and locations) of squares attacking the target square
+// param data: NULL for no list creation, pointer to LList(Coord) to return the data
+// return: number of squares / pieces found attacking the target square
+// PURPOSE OF EXISTENCE OF THIS FUNCTION: dont create a list of potential attacks if we only need the number of them
+static int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
 {
+    int numberOfAttacks = 0;
     PieceColor castingAs = OTHER_COLOR(color);
-    LListCreate(Coord, coordsTargeting);
 
     for(MoveType moveType=MOVE_DIAGONAL; moveType < N_MOVE_TYPES; moveType++)
     {
+        if(!castingTypes.types[moveType]) continue;
+
         LList(Move) moves = MOVE_TYPE_FUNCTION_LOOKUP[moveType](pos, target, castingAs);
 
         Move* move;
         LListFORPTR(Move, move, moves)
         {
             Piece* pieceAtTarget = getPieceAtCoord(pos, move->to);
-            if(move->isCapture && PIECE_DATA[pieceAtTarget->type].moveTypes[moveType])
+            if(move->isCapture && PIECE_DATA[pieceAtTarget->type].move_types.types[moveType])
             {
-                LListAppendData(Coord)(&coordsTargeting, move->to);
+                numberOfAttacks++;
+
+                if(data) LListAppendData(Coord)(data, move->to);
             }
         }
 
         LListFreeNodes(Move)(&moves);
     }
 
-    return coordsTargeting;
+    return numberOfAttacks;
 }
 
 
@@ -148,31 +153,11 @@ bool isPositionLegal(Position* pos)
 
     // If the color not playing is in check, the position is invalid
 
-    bool checksFound = false;
-
-    for(MoveType moveType=MOVE_DIAGONAL; !checksFound && moveType < N_MOVE_TYPES; moveType++)
-    {
-        LList(Move) moves = MOVE_TYPE_FUNCTION_LOOKUP[moveType](pos, kingPositions[colorNotPlaying], colorNotPlaying);
-
-        Move* move;
-        LListFORPTR(Move, move, moves)
-        {
-            Piece* pieceAtTarget = getPieceAtCoord(pos, move->to);
-            if(move->isCapture && PIECE_DATA[pieceAtTarget->type].moveTypes[moveType])
-            {
-                checksFound = true;
-                break;
-            }
-        }
-
-        LListFreeNodes(Move)(&moves);
-    }
-
-    return !checksFound;
+    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
 }
 
+//bool isInCheck(Position* pos, PieceColor color)
+//{
+//    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL);
+//}
 
-void getLegalMoves(Position* pos)
-{
-
-}

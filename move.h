@@ -5,15 +5,10 @@
 
 #include "coord.h"
 #include "position.h"
-#include "move.h"
 
 #include "linkedlist.def.h"
 
-
-
 #define MAX_ALGEBRAIC_NOTATION_STRING 11
-#define N_MOVE_TYPES 5
-
 
 
 typedef struct move
@@ -26,10 +21,11 @@ typedef struct move
     // easy way around en passant
     bool isCapture;
     Coord captureSquare;
+
+    PieceType promotionType;
 } Move;
 
 
-typedef enum move_type{MOVE_DIAGONAL, MOVE_CROSS, MOVE_KNIGHT, MOVE_PAWN, MOVE_KING} MoveType;
 
 LListDeclarations(Move)
 
@@ -41,6 +37,8 @@ LList(Move) KnightMove(Position* pos, Coord from, PieceColor color);
 LList(Move) PawnMove(Position* pos, Coord from, PieceColor color);
 LList(Move) KingMove(Position* pos, Coord from, PieceColor color);
 
+
+LList(Move) getLegalMoves(Position* pos);
 void DebugPrintMove(Move* move);
 
 #endif //CHEESENG_MOVE_H

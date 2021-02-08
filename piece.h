@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#include "movetypes.h"
+
+
 
 typedef enum PieceType{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE} PieceType;
 typedef enum PieceColor{WHITE, BLACK, NO_COLOR} PieceColor;
@@ -14,7 +17,7 @@ typedef struct PieceData
 {
     char symbol;
     int value;
-    bool moveTypes[5];
+    MoveTypes move_types;
 } PieceData;
 
 
