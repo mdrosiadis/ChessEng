@@ -1,3 +1,4 @@
+
 #ifndef CHEESENG_POSITION_H
 #define CHEESENG_POSITION_H
 
@@ -8,6 +9,7 @@
 #include "piece.h"
 
 #include "linkedlist.def.h"
+
 
 LListDeclarations(Coord)
 
@@ -36,7 +38,7 @@ typedef struct position
 Piece* getPieceAtCoord(Position* pos, Coord coord);
 Position CreatePositionFromFEN(char* FEN);
 //bool makeMove(Position* pos, Move* move);
-//LList(Coord) CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes);
+int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data);
 bool isPositionLegal(Position* pos);
 
 

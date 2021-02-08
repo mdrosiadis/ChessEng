@@ -8,9 +8,17 @@
 int main() {
 
 
-    Position fen = CreatePositionFromFEN("rn1b1bnr/ppPppppp/4kq2/8/3Q4/3PK2N/PPP2PPP/RNB2B1R w - - 0 1");
+    Position fen = CreatePositionFromFEN("rnb1kbnr/pppppppp/1q6/8/8/8/8/R3K2R w KQkq - 0 1");
 
     PositionDebugPrint(&fen);
+
+
+
+    Move shortCastle = {.isCastling = SHORT_CASTLE};
+    Move longCastle = {.isCastling = LONG_CASTLE};
+
+    printf("%d%d\n", isLegalMove(&fen, &shortCastle), isLegalMove(&fen, &longCastle));
+
 
     printf("%d\n", isPositionLegal(&fen));
 
@@ -18,7 +26,13 @@ int main() {
     Move* m;
     LListFORPTR(Move, m, moves)
     {
+        createMoveString(&fen, m);
         DebugPrintMove(m);
     }
+
+    //
+//    playMove(&fen, &exd5, &fen);
+//    PositionDebugPrint(&fen);
+
     return 0;
 }

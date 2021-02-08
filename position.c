@@ -2,11 +2,14 @@
 #include <ctype.h>
 #include <assert.h>
 
+
 #include "position.h"
 #include "move.h"
 
+
 LListDefinitions(Coord)
 
+const char castleTypes[] = {'K', 'Q', 'k', 'q'};
 
 void PositionDebugPrint(Position* pos)
 {
@@ -22,7 +25,10 @@ void PositionDebugPrint(Position* pos)
         putchar('\n');
     }
 
-    printf("%s to move\n", pos->color_playing == WHITE ? "White" : "Black");
+    printf("Castling rights: ");
+    for(int i=0; i < 4; i++) if(pos->castling_rights[i/2][i%2]) putchar(castleTypes[i]);
+
+    printf("\n%s to move\n", pos->color_playing == WHITE ? "White" : "Black");
 }
 
 Position CreatePositionFromFEN(char* FEN)
@@ -73,6 +79,19 @@ Position CreatePositionFromFEN(char* FEN)
         default: exit(-1);
     }
 
+    for(FEN++; *FEN && *FEN != ' '; FEN++)
+    {
+
+        for(int i = 0; i < 4; i++)
+        {
+            if(*FEN == castleTypes[i])
+            {
+                newPos.castling_rights[i/2][i%2] = true;
+                break;
+            }
+        }
+    }
+
 
 
     return newPos;
@@ -92,7 +111,7 @@ Piece* getPieceAtCoord(Position* pos, Coord coord)
 // param data: NULL for no list creation, pointer to LList(Coord) to return the data
 // return: number of squares / pieces found attacking the target square
 // PURPOSE OF EXISTENCE OF THIS FUNCTION: dont create a list of potential attacks if we only need the number of them
-static int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
+int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
 {
     int numberOfAttacks = 0;
     PieceColor castingAs = OTHER_COLOR(color);
@@ -138,7 +157,7 @@ bool isPositionLegal(Position* pos)
             if(pieceAtCurrent->type == KING)
             {
                 // More than one kings for one color in position -> INVALID
-                if(!COORD_EQUALS(kingPositions[pieceAtCurrent->color], DEFAULT_INVALID_COORD))
+                if(!coordEquals(kingPositions[pieceAtCurrent->color], DEFAULT_INVALID_COORD))
                     return false;
 
                 kingPositions[pieceAtCurrent->color] = current;
@@ -156,8 +175,4 @@ bool isPositionLegal(Position* pos)
     return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
 }
 
-//bool isInCheck(Position* pos, PieceColor color)
-//{
-//    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL);
-//}
 

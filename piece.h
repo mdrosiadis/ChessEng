@@ -31,6 +31,8 @@ typedef struct Piece
 
 extern const PieceData PIECE_DATA[];
 
+bool PieceEquals(Piece a, Piece b);
+
 char PieceFENChar(Piece* p);
 Piece PieceFromFENChar(char FENChar);
 

@@ -15,6 +15,11 @@ const PieceData PIECE_DATA[] =
     {'.', 0, {0, 0, 0, 0, 0}}
 };
 
+inline bool PieceEquals(Piece a, Piece b)
+{
+    return a.color == b.color && a.type == b.type;
+}
+
 char PieceFENChar(Piece* p)
 {
     return p->color == WHITE ? PIECE_SYMBOLS[p->type] : tolower(PIECE_SYMBOLS[p->type]);
