@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "move.h"
 #include "position.h"
@@ -7,32 +8,52 @@
 
 int main() {
 
+    char inputmove[25];
+    Move pendingMove;
 
-    Position fen = CreatePositionFromFEN("rnb1kbnr/pppppppp/1q6/8/8/8/8/R3K2R w KQkq - 0 1");
-
-    PositionDebugPrint(&fen);
-
-
-
-    Move shortCastle = {.isCastling = SHORT_CASTLE};
-    Move longCastle = {.isCastling = LONG_CASTLE};
-
-    printf("%d%d\n", isLegalMove(&fen, &shortCastle), isLegalMove(&fen, &longCastle));
+    Position fen = CreatePositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
 
-    printf("%d\n", isPositionLegal(&fen));
 
-    LList(Move) moves = getLegalMoves(&fen);
-    Move* m;
-    LListFORPTR(Move, m, moves)
+    while(1)
     {
-        createMoveString(&fen, m);
-        DebugPrintMove(m);
+        PositionDebugPrint(&fen);
+        printf("UCI (q to stop): ");
+        scanf("%s", inputmove);
+
+        if(!strcmp(inputmove, "q")) break;
+
+        if(CreateMoveFromUCI(inputmove, &pendingMove))
+        {
+            printf("Syntax correct!\n");
+
+            if(doesMoveExist(&fen, &pendingMove))
+            {
+                printf("Move exists!\n");
+
+                if(isLegalMove(&fen, &pendingMove))
+                {
+                    printf("Move is Legal! Move is: ");
+                    createMoveString(&fen, &pendingMove);
+                    DebugPrintMove(&pendingMove);
+                    playMove(&fen, &pendingMove, &fen);
+                }
+                else
+                {
+                    printf("Not a legal move!\n");
+                }
+            }
+            else
+            {
+                printf("Move doesnt exist on the board!\n");
+            }
+        }
+        else
+        {
+            printf("Bad UCI!\n");
+        }
     }
 
-    //
-//    playMove(&fen, &exd5, &fen);
-//    PositionDebugPrint(&fen);
 
     return 0;
 }

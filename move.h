@@ -33,21 +33,23 @@ typedef struct move
 
 LListDeclarations(Move)
 
-extern LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(Position*, Coord, PieceColor);
+extern LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor);
 
-LList(Move) DiagonalMove(Position* pos, Coord from, PieceColor color);
-LList(Move) CrossMove(Position* pos, Coord from, PieceColor color);
-LList(Move) KnightMove(Position* pos, Coord from, PieceColor color);
-LList(Move) PawnMove(Position* pos, Coord from, PieceColor color);
-LList(Move) KingMove(Position* pos, Coord from, PieceColor color);
+LList(Move) DiagonalMove(const Position* pos, Coord from, PieceColor color);
+LList(Move) CrossMove(const Position* pos, Coord from, PieceColor color);
+LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color);
+LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color);
+LList(Move) KingMove(const Position* pos, Coord from, PieceColor color);
 
-bool isLegalMove(Position* pos, Move* move);
-LList(Move) getLegalMoves(Position* pos);
+bool isLegalMove(const Position* pos, Move* move);
+LList(Move) getLegalMoves(const Position* pos);
 
-bool doesMoveExist(Position *pos, Move *move);
+bool doesMoveExist(const Position *pos, Move *move);
 void playMove(const Position *pos, Move *move, Position *newPosition);
 
-void createMoveString(Position* pos, Move* move);
-void DebugPrintMove(Move* move);
+bool CreateMoveFromUCI(const char *uci, Move *move);
+
+void createMoveString(const Position* pos, Move* move);
+void DebugPrintMove(const Move* move);
 
 #endif //CHEESENG_MOVE_H

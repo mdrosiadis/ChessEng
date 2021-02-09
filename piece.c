@@ -20,9 +20,9 @@ inline bool PieceEquals(Piece a, Piece b)
     return a.color == b.color && a.type == b.type;
 }
 
-char PieceFENChar(Piece* p)
+char PieceFENChar(Piece p)
 {
-    return p->color == WHITE ? PIECE_SYMBOLS[p->type] : tolower(PIECE_SYMBOLS[p->type]);
+    return p.color == WHITE ? PIECE_SYMBOLS[p.type] : tolower(PIECE_SYMBOLS[p.type]);
 }
 
 Piece PieceFromFENChar(char FENChar)

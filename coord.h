@@ -30,4 +30,6 @@ bool coordEquals(Coord a, Coord b);
 void DebugPrintCoordFull(Coord coord);
 void PrintCoordAlgebraic(Coord coord);
 
+Coord CoordFromAlgebraic(const char *alg);
+
 #endif //CHEESENG_COORD_H

@@ -35,14 +35,15 @@ typedef struct position
 
 
 
-Piece* getPieceAtCoord(Position* pos, Coord coord);
-Position CreatePositionFromFEN(char* FEN);
+Piece getPieceAtCoord(const Position* pos, Coord coord);
+void setPieceAtCoord(Position* pos, Coord coord, Piece piece);
+Position CreatePositionFromFEN(const char* FEN);
 //bool makeMove(Position* pos, Move* move);
-int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data);
-bool isPositionLegal(Position* pos);
+int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data);
+bool isPositionLegal(const Position* pos);
 
 
-void PositionDebugPrint(Position* pos);
+void PositionDebugPrint(const Position* pos);
 
 
 #endif //CHEESENG_POSITION_H

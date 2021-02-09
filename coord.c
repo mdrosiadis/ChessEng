@@ -34,3 +34,10 @@ void PrintCoordAlgebraic(Coord coord)
 {
     printf("%c%c", CoordFileToChar(coord.file), CoordRowToChar(coord.row));
 }
+
+Coord CoordFromAlgebraic(const char *alg)
+{
+    Coord c = {alg[0] - 'a', alg[1] - '1'};
+
+    return validCoord(c) ? c : DEFAULT_INVALID_COORD;
+}

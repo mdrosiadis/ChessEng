@@ -33,7 +33,7 @@ extern const PieceData PIECE_DATA[];
 
 bool PieceEquals(Piece a, Piece b);
 
-char PieceFENChar(Piece* p);
+char PieceFENChar(Piece p);
 Piece PieceFromFENChar(char FENChar);
 
 #endif //CHEESENG_PIECE_H

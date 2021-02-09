@@ -11,14 +11,14 @@ LListDefinitions(Coord)
 
 const char castleTypes[] = {'K', 'Q', 'k', 'q'};
 
-void PositionDebugPrint(Position* pos)
+void PositionDebugPrint(const Position* pos)
 {
 
     for(int row = BOARD_SIZE-1; row >= 0; row--)
     {
         for(int file = 0; file < BOARD_SIZE; file++)
         {
-            putchar(PieceFENChar(&(pos->position_grid[file][row])));
+            putchar(PieceFENChar(getPieceAtCoord(pos, (Coord){file, row})));
 
         }
 
@@ -31,7 +31,7 @@ void PositionDebugPrint(Position* pos)
     printf("\n%s to move\n", pos->color_playing == WHITE ? "White" : "Black");
 }
 
-Position CreatePositionFromFEN(char* FEN)
+Position CreatePositionFromFEN(const char* FEN)
 {
     Position newPos;
     int file = 0, row = BOARD_SIZE -1;
@@ -97,9 +97,14 @@ Position CreatePositionFromFEN(char* FEN)
     return newPos;
 }
 
-Piece* getPieceAtCoord(Position* pos, Coord coord)
+Piece getPieceAtCoord(const Position* pos, Coord coord)
 {
-    return validCoord(coord) ? &(pos->position_grid[coord.file][coord.row]) : NULL;
+    return validCoord(coord) ? pos->position_grid[coord.file][coord.row] : NO_PIECE_LITERAL;
+}
+
+void setPieceAtCoord(Position* pos, Coord coord, Piece piece)
+{
+    if(validCoord(coord)) pos->position_grid[coord.file][coord.row] = piece;
 }
 
 //bool makeMove(Position* pos, Move* move)
@@ -111,7 +116,7 @@ Piece* getPieceAtCoord(Position* pos, Coord coord)
 // param data: NULL for no list creation, pointer to LList(Coord) to return the data
 // return: number of squares / pieces found attacking the target square
 // PURPOSE OF EXISTENCE OF THIS FUNCTION: dont create a list of potential attacks if we only need the number of them
-int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
+int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
 {
     int numberOfAttacks = 0;
     PieceColor castingAs = OTHER_COLOR(color);
@@ -125,8 +130,8 @@ int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveType
         Move* move;
         LListFORPTR(Move, move, moves)
         {
-            Piece* pieceAtTarget = getPieceAtCoord(pos, move->to);
-            if(move->isCapture && PIECE_DATA[pieceAtTarget->type].move_types.types[moveType])
+            Piece pieceAtTarget = getPieceAtCoord(pos, move->to);
+            if(move->isCapture && PIECE_DATA[pieceAtTarget.type].move_types.types[moveType])
             {
                 numberOfAttacks++;
 
@@ -141,7 +146,7 @@ int CoordsTargetingCoord(Position* pos, Coord target, PieceColor color, MoveType
 }
 
 
-bool isPositionLegal(Position* pos)
+bool isPositionLegal(const Position* pos)
 {
     PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
 
@@ -152,15 +157,15 @@ bool isPositionLegal(Position* pos)
     for(current.file = FILE_A; current.file <= FILE_H; current.file++)
         for(current.row = ROW_1; current.row <= ROW_8; current.row++)
         {
-            Piece* pieceAtCurrent = getPieceAtCoord(pos, current);
+            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
 
-            if(pieceAtCurrent->type == KING)
+            if(pieceAtCurrent.type == KING)
             {
                 // More than one kings for one color in position -> INVALID
-                if(!coordEquals(kingPositions[pieceAtCurrent->color], DEFAULT_INVALID_COORD))
+                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
                     return false;
 
-                kingPositions[pieceAtCurrent->color] = current;
+                kingPositions[pieceAtCurrent.color] = current;
 
             }
         }
