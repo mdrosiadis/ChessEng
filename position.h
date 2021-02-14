@@ -33,6 +33,8 @@ typedef struct position
 
 } Position;
 
+typedef enum positionstate {NORMAL, CHECK, CHECKMATE, DRAW, INVALID} PositionState;
+
 
 
 Piece getPieceAtCoord(const Position* pos, Coord coord);
@@ -40,7 +42,9 @@ void setPieceAtCoord(Position* pos, Coord coord, Piece piece);
 Position CreatePositionFromFEN(const char* FEN);
 //bool makeMove(Position* pos, Move* move);
 int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data);
+PositionState getPositionState(const Position *pos);
 bool isPositionLegal(const Position* pos);
+bool isPositionPlayable(const Position *pos);
 
 
 void PositionDebugPrint(const Position* pos);

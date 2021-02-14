@@ -145,6 +145,54 @@ int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, Mo
     return numberOfAttacks;
 }
 
+PositionState getPositionState(const Position *pos)
+{
+    PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
+
+
+    Coord kingPositions[2] = {DEFAULT_INVALID_COORD, DEFAULT_INVALID_COORD};
+
+    Coord current;
+    for(current.file = FILE_A; current.file <= FILE_H; current.file++)
+        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
+        {
+            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
+
+            if(pieceAtCurrent.type == KING)
+            {
+                // More than one kings for one color in position -> INVALID
+                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
+                    return INVALID;
+
+                kingPositions[pieceAtCurrent.color] = current;
+
+            }
+        }
+
+    // No kings found for some color -> INVALID
+    if(IS_DEFAULT_INVALID_COORD(kingPositions[WHITE]) || IS_DEFAULT_INVALID_COORD(kingPositions[BLACK]))
+        return INVALID;
+
+
+    // If the color not playing is in check, the position is invalid
+    if(CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) != 0) return INVALID;
+
+    /* Check for checks and legal moves. if in check and no legal moves -> checkmate, if legal moves -> check.
+     * if not in check and no legal moves -> draw*/
+
+    bool inCheck = CoordsTargetingCoord(pos, kingPositions[pos->color_playing], colorNotPlaying, (MoveTypes){1,1,1,1,1}, NULL) != 0;
+
+    LList(Move) legalMoves = getLegalMoves(pos);
+    int legalMoveCount = legalMoves.length;
+
+    LListFreeNodes(Move)(&legalMoves);
+
+    if(inCheck)
+        return legalMoveCount > 0 ? CHECK : CHECKMATE;
+    else
+        return legalMoveCount > 0 ? NORMAL : DRAW;
+}
+
 
 bool isPositionLegal(const Position* pos)
 {
@@ -176,8 +224,13 @@ bool isPositionLegal(const Position* pos)
 
 
     // If the color not playing is in check, the position is invalid
-
     return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
 }
 
+inline bool isPositionPlayable(const Position *pos)
+{
+    PositionState state = getPositionState(pos);
+
+    return state == NORMAL || state == CHECK;
+}
 

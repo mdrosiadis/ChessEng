@@ -112,7 +112,7 @@ void LList_##DATATYPE##_FreeNodes(LList(DATATYPE) * list) \
 }\
 void LList_##DATATYPE##_RemoveNode(LList(DATATYPE) *list, Node_##DATATYPE *node)\
 {\
-    if(!list && list->length == 0) return;\
+    if(!list || list->length == 0) return;\
                                    \
     if(list->head == node)         \
     {                              \

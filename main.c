@@ -13,13 +13,14 @@ int main() {
 
     Position fen = CreatePositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
+    // getLegalMoves(&fen);
 
-
-    while(1)
+    while(isPositionPlayable(&fen))
     {
         PositionDebugPrint(&fen);
         printf("UCI (q to stop): ");
-        scanf("%s", inputmove);
+        fgets(inputmove, 24, stdin);
+        inputmove[strlen(inputmove)-1] = 0; /* remove newline */
 
         if(!strcmp(inputmove, "q")) break;
 

@@ -250,16 +250,18 @@ LList(Move) getLegalMoves(const Position* pos)
     if(doesMoveExist(pos, &SHORT_CASTLE_MOVE)) LListAppendData(Move)(&allMoves, SHORT_CASTLE_MOVE);
     if(doesMoveExist(pos, &LONG_CASTLE_MOVE))  LListAppendData(Move)(&allMoves, LONG_CASTLE_MOVE);
 
+    LListCreate(Move, legalMoves);
     Move* move;
 
     LListFORPTR(Move, move, allMoves)
     {
-        if(!isLegalMove(pos, move)) LList_Move_RemoveNode(&allMoves, node);
+        if(isLegalMove(pos, move)) LListAppendData(Move)(&legalMoves, *move);
     }
 
+    LListFreeNodes(Move)(&allMoves);
 
 
-    return allMoves;
+    return legalMoves;
 }
 
 void createMoveString(const Position* pos, Move* move)
@@ -312,6 +314,23 @@ void createMoveString(const Position* pos, Move* move)
         move->algebraicNotation[stringIndex++] = PIECE_DATA[move->promotionType].symbol;
     }
 
+    Position played;
+    PositionState state;
+
+    playMove(pos, move, &played);
+    state = getPositionState(&played);
+
+    switch(state)
+    {
+        case CHECK:
+            move->algebraicNotation[stringIndex++] = '+';
+            break;
+
+        case CHECKMATE:
+            move->algebraicNotation[stringIndex++] = '#';
+            break;
+
+    }
     move->algebraicNotation[stringIndex] = 0;
 
 }
@@ -402,7 +421,7 @@ bool doesMoveExist(const Position *pos, Move *move)
         Move *cur;
         LListFORPTR(Move, cur, moves)
         {
-            if(coordEquals(cur->to, move->to))
+            if(coordEquals(cur->to, move->to) && move->promotionType == cur->promotionType)
             {
                 // Get the move created by the engine (all data)
                 *move = *cur;
@@ -427,6 +446,20 @@ bool CreateMoveFromUCI(const char *uci, Move *move)
 
     move->from = CoordFromAlgebraic(uci);
     move->to   = CoordFromAlgebraic(uci + 2);
+
+    for(PieceColor color = WHITE; color <= BLACK; color++)
+    {
+        if(!coordEquals(move->from, CASTLING_KING_START_COORD[color])) continue;
+
+        for(CastlingMove castle = SHORT_CASTLE; castle <= LONG_CASTLE; castle++)
+        {
+            if(coordEquals(move->to, CASTLING_KING_TARGET_COORD[color][castle]))
+            {
+                move->isCastling = castle;
+            }
+        }
+    }
+
 
     if(uci[4]) move->promotionType = PieceFromFENChar(uci[4]).type;
 
