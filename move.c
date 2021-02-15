@@ -17,6 +17,11 @@ static const Coord CASTLING_ROOK_START_COORD[2][2] = {{{FILE_H, ROW_1}, {FILE_A,
 static const Coord CASTLING_KING_TARGET_COORD[2][2] = {{{FILE_G, ROW_1}, {FILE_C, ROW_1}}, {{FILE_G, ROW_8}, {FILE_C, ROW_8}}};
 static const Coord CASTLING_ROOK_TARGET_COORD[2][2] = {{{FILE_F, ROW_1}, {FILE_D, ROW_1}}, {{FILE_F, ROW_8}, {FILE_D, ROW_8}}};
 
+static const CoordRow PAWN_STARTING_ROW[2]  = {ROW_2, ROW_7};
+static const CoordRow PAWN_PROMOTION_ROW[2] = {ROW_8, ROW_1};
+
+static const int PAWN_MOVING_DIRECTION[2] = {1, -1};
+
 LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor) =
         {DiagonalMove, CrossMove, KnightMove, PawnMove, KingMove};
 
@@ -99,16 +104,14 @@ LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color)
 LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
 {
     LListCreate(Move, moves);
-    int movingDirection = (color == WHITE) ? 1 : -1;
-    CoordRow pawnStartingPosition = (color ==  WHITE) ? ROW_2 : ROW_7;
-    CoordRow promotionRow = (color ==  WHITE) ? ROW_8 : ROW_1;
-    Coord captures[] = {{-1, movingDirection}, {1, movingDirection}};
+
+    Coord captures[] = {{-1, PAWN_MOVING_DIRECTION[color]}, {1, PAWN_MOVING_DIRECTION[color]}};
 
     Coord current = from;
 
-    for(int i=0; i < 1 + (from.row == pawnStartingPosition); i++)
+    for(int i=0; i < 1 + (from.row == PAWN_STARTING_ROW[color]); i++)
     {
-        current.row += movingDirection;
+        current.row += PAWN_MOVING_DIRECTION[color];
 
         if(!validCoord(current)) break;
 
@@ -119,7 +122,7 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
         Move newMove = CLEAR_MOVE;
         newMove.from = from; newMove.to = current;
 
-        if(current.row == promotionRow)
+        if(current.row == PAWN_PROMOTION_ROW[color])
         {
             for(PieceType type = KNIGHT; type <= QUEEN; type++)
             {
@@ -149,7 +152,7 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
             Move newMove = CLEAR_MOVE;
             newMove.from = from; newMove.to = current; newMove.isCapture = true; newMove.captureSquare = current;
 
-            if(current.row == promotionRow)
+            if(current.row == PAWN_PROMOTION_ROW[color])
             {
                 for(PieceType type = KNIGHT; type <= QUEEN; type++)
                 {
@@ -165,7 +168,7 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
         }
         else if(coordEquals(current, pos->en_passant) && pieceAtCurrent.type == NO_PIECE && color == pos->color_playing) //en passant
         {
-            Coord enPassantCaptureSquare = {pos->en_passant.file, pos->en_passant.row - movingDirection};
+            Coord enPassantCaptureSquare = {pos->en_passant.file, pos->en_passant.row - PAWN_MOVING_DIRECTION[color]};
 
             Move newMove = CLEAR_MOVE;
             newMove.from = from; newMove.to = current; newMove.isCapture = true; newMove.captureSquare = enPassantCaptureSquare;
@@ -338,6 +341,7 @@ void createMoveString(const Position* pos, Move* move)
 void playMove(const Position *pos, Move *move, Position *newPosition)
 {
     *newPosition = *pos;
+    newPosition->en_passant = DEFAULT_INVALID_COORD;
 
     if(move->isCastling != NO_CASTLE)
     {
@@ -372,6 +376,18 @@ void playMove(const Position *pos, Move *move, Position *newPosition)
                 }
             }
         }
+        else if(pieceMoving.type == PAWN && move->from.row == PAWN_STARTING_ROW[pos->color_playing]
+                                         && move->to.row == (PAWN_STARTING_ROW[pos->color_playing] + 2 * PAWN_MOVING_DIRECTION[pos->color_playing]))
+        {
+
+            if(PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file-1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) ||
+               PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file+1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) )
+            {
+                newPosition->en_passant = (Coord){move->from.file, move->from.row + PAWN_MOVING_DIRECTION[pos->color_playing]};
+            }
+        }
+
+
 
         if(move->isCapture) setPieceAtCoord(newPosition, move->captureSquare, NO_PIECE_LITERAL);
         setPieceAtCoord(newPosition, move->to, pieceAtFromCache);

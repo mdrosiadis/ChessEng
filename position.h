@@ -45,7 +45,7 @@ int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, Mo
 PositionState getPositionState(const Position *pos);
 bool isPositionLegal(const Position* pos);
 bool isPositionPlayable(const Position *pos);
-
+bool isInCheck(const Position *pos, PieceColor color);
 
 void PositionDebugPrint(const Position* pos);
 

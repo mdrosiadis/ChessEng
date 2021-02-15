@@ -25,7 +25,13 @@ void PositionDebugPrint(const Position* pos)
         putchar('\n');
     }
 
-    printf("Castling rights: ");
+    printf("En passant: ");
+    if(validCoord(pos->en_passant))
+        PrintCoordAlgebraic(pos->en_passant);
+    else
+        putchar('-');
+
+    printf("\nCastling rights: ");
     for(int i=0; i < 4; i++) if(pos->castling_rights[i/2][i%2]) putchar(castleTypes[i]);
 
     printf("\n%s to move\n", pos->color_playing == WHITE ? "White" : "Black");
@@ -35,6 +41,8 @@ Position CreatePositionFromFEN(const char* FEN)
 {
     Position newPos;
     int file = 0, row = BOARD_SIZE -1;
+
+    newPos.en_passant = DEFAULT_INVALID_COORD;
 
     // Position data
     for(; *FEN && !(row == 0 && file == BOARD_SIZE); FEN++)
@@ -92,7 +100,24 @@ Position CreatePositionFromFEN(const char* FEN)
         }
     }
 
+    /* Skip space */
+    assert(*FEN == ' ');
+    FEN++;
 
+    if(*FEN == '-')
+    {
+        newPos.en_passant = DEFAULT_INVALID_COORD;
+        FEN++;
+    }
+    else
+    {
+        newPos.en_passant = CoordFromAlgebraic(FEN);
+        assert(validCoord(newPos.en_passant));
+        FEN+=2;
+    }
+
+    assert(*FEN == ' ');
+    FEN++;
 
     return newPos;
 }
@@ -150,37 +175,14 @@ PositionState getPositionState(const Position *pos)
     PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
 
 
-    Coord kingPositions[2] = {DEFAULT_INVALID_COORD, DEFAULT_INVALID_COORD};
-
-    Coord current;
-    for(current.file = FILE_A; current.file <= FILE_H; current.file++)
-        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
-        {
-            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
-
-            if(pieceAtCurrent.type == KING)
-            {
-                // More than one kings for one color in position -> INVALID
-                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
-                    return INVALID;
-
-                kingPositions[pieceAtCurrent.color] = current;
-
-            }
-        }
-
-    // No kings found for some color -> INVALID
-    if(IS_DEFAULT_INVALID_COORD(kingPositions[WHITE]) || IS_DEFAULT_INVALID_COORD(kingPositions[BLACK]))
-        return INVALID;
-
-
     // If the color not playing is in check, the position is invalid
-    if(CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) != 0) return INVALID;
+    if(isInCheck(pos, colorNotPlaying)) return INVALID;
 
-    /* Check for checks and legal moves. if in check and no legal moves -> checkmate, if legal moves -> check.
-     * if not in check and no legal moves -> draw*/
+    /* Check for checks and legal moves.
+     * If in check and no legal moves -> checkmate, if legal moves -> check.
+     * If not in check and no legal moves -> draw*/
 
-    bool inCheck = CoordsTargetingCoord(pos, kingPositions[pos->color_playing], colorNotPlaying, (MoveTypes){1,1,1,1,1}, NULL) != 0;
+    bool inCheck = isInCheck(pos, pos->color_playing);
 
     LList(Move) legalMoves = getLegalMoves(pos);
     int legalMoveCount = legalMoves.length;
@@ -193,38 +195,62 @@ PositionState getPositionState(const Position *pos)
         return legalMoveCount > 0 ? NORMAL : DRAW;
 }
 
-
-bool isPositionLegal(const Position* pos)
+bool isInCheck(const Position *pos, PieceColor color)
 {
-    PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
-
-
-    Coord kingPositions[2] = {DEFAULT_INVALID_COORD, DEFAULT_INVALID_COORD};
-
+    Coord kingPosition = DEFAULT_INVALID_COORD;
     Coord current;
-    for(current.file = FILE_A; current.file <= FILE_H; current.file++)
+
+    bool found = false;
+
+    for(current.file = FILE_A; !found && current.file <= FILE_H; current.file++)
         for(current.row = ROW_1; current.row <= ROW_8; current.row++)
         {
             Piece pieceAtCurrent = getPieceAtCoord(pos, current);
 
-            if(pieceAtCurrent.type == KING)
+            if(PieceEquals(pieceAtCurrent, (Piece){KING, color}))
             {
-                // More than one kings for one color in position -> INVALID
-                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
-                    return false;
-
-                kingPositions[pieceAtCurrent.color] = current;
-
+                kingPosition = current;
+                break;
             }
         }
 
-    // No kings found for some color -> INVALID
-    if(IS_DEFAULT_INVALID_COORD(kingPositions[WHITE]) || IS_DEFAULT_INVALID_COORD(kingPositions[BLACK]))
-        return false;
+    return CoordsTargetingCoord(pos, kingPosition, OTHER_COLOR(color), (MoveTypes){1,1,1,1,1}, NULL) != 0;
+}
 
 
-    // If the color not playing is in check, the position is invalid
-    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
+bool isPositionLegal(const Position* pos)
+{
+//    PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
+//
+//
+//    Coord kingPositions[2] = {DEFAULT_INVALID_COORD, DEFAULT_INVALID_COORD};
+//
+//    Coord current;
+//    for(current.file = FILE_A; current.file <= FILE_H; current.file++)
+//        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
+//        {
+//            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
+//
+//            if(pieceAtCurrent.type == KING)
+//            {
+//                // More than one kings for one color in position -> INVALID
+//                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
+//                    return false;
+//
+//                kingPositions[pieceAtCurrent.color] = current;
+//
+//            }
+//        }
+//
+//    // No kings found for some color -> INVALID
+//    if(IS_DEFAULT_INVALID_COORD(kingPositions[WHITE]) || IS_DEFAULT_INVALID_COORD(kingPositions[BLACK]))
+//        return false;
+//
+//
+//    // If the color not playing is in check, the position is invalid
+//    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
+
+    return !isInCheck(pos, OTHER_COLOR(pos->color_playing));
 }
 
 inline bool isPositionPlayable(const Position *pos)

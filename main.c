@@ -11,11 +11,12 @@ int main() {
     char inputmove[25];
     Move pendingMove;
 
+
     Position fen = CreatePositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    // getLegalMoves(&fen);
+    PositionState state;
 
-    while(isPositionPlayable(&fen))
+    while((state = getPositionState(&fen)) == NORMAL || state == CHECK)
     {
         PositionDebugPrint(&fen);
         printf("UCI (q to stop): ");
@@ -54,6 +55,8 @@ int main() {
             printf("Bad UCI!\n");
         }
     }
+
+    printf("%d\n", state);
 
 
     return 0;
