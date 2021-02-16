@@ -18,14 +18,14 @@ typedef struct coord
 extern const Coord DEFAULT_INVALID_COORD;
 
 
-#define IS_DEFAULT_INVALID_COORD(coord) (coordEquals(coord, DEFAULT_INVALID_COORD))
+#define IS_DEFAULT_INVALID_COORD(coord) (CoordEquals(coord, DEFAULT_INVALID_COORD))
 
 bool validCoord(Coord coord);
 
 char CoordFileToChar(CoordFile file);
 char CoordRowToChar(CoordRow row);
 
-bool coordEquals(Coord a, Coord b);
+bool CoordEquals(Coord a, Coord b);
 
 void DebugPrintCoordFull(Coord coord);
 void PrintCoordAlgebraic(Coord coord);

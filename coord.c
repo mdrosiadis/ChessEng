@@ -15,7 +15,7 @@ void DebugPrintCoordFull(Coord coord)
     printf(" (file: %d row: %d)\n", coord.file + 'a', coord.row + '1', coord.file, coord.row);
 }
 
-inline bool coordEquals(Coord a, Coord b)
+inline bool CoordEquals(Coord a, Coord b)
 {
     return a.file == b.file && a.row == b.row;
 }

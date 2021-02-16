@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "piece.h"
 #include "move.h"
@@ -25,12 +26,12 @@ static const int PAWN_MOVING_DIRECTION[2] = {1, -1};
 LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor) =
         {DiagonalMove, CrossMove, KnightMove, PawnMove, KingMove};
 
-#define COORD_ADD_SELF(a, b) a.file+=b.file, a.row+=b.row
+#define COORD_ADD_SELF(a, b) (a).file+=(b).file, (a).row+=(b).row
 
-static Move CLEAR_MOVE = {.isCastling = NO_CASTLE, .algebraicNotation = "", .isCapture = false, .promotionType = NO_PIECE};
+static Move CLEAR_MOVE = {.castlingType = NO_CASTLE, .algebraicNotation = "", .promotionType = NO_PIECE};
 
-static Move SHORT_CASTLE_MOVE = {.isCastling = SHORT_CASTLE};
-static Move LONG_CASTLE_MOVE  = {.isCastling = LONG_CASTLE };
+static Move SHORT_CASTLE_MOVE = {.castlingType = SHORT_CASTLE};
+static Move LONG_CASTLE_MOVE  = {.castlingType = LONG_CASTLE };
 
 #define LINE_MOVES(DIRSET) \
     LListCreate(Move, moves);\
@@ -50,7 +51,6 @@ static Move LONG_CASTLE_MOVE  = {.isCastling = LONG_CASTLE };
 \
                 if(pieceAtCurrent.color != color) \
                 {\
-                    newMove.isCapture = true; newMove.captureSquare = current;\
                     LListAppendData(Move)(&moves, newMove); \
                 } \
 \
@@ -59,7 +59,6 @@ static Move LONG_CASTLE_MOVE  = {.isCastling = LONG_CASTLE };
             } \
 \
             /* Otherwise, we can make a regular move on square current */ \
-            newMove.isCapture = false;\
             LListAppendData(Move)(&moves, newMove); \
         } \
     } \
@@ -92,8 +91,7 @@ LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color)
         if(pieceAtCurrent.type == NO_PIECE || pieceAtCurrent.color != color)
         {
             Move newMove = CLEAR_MOVE;
-            newMove.from = from; newMove.to = current; newMove.isCapture = (pieceAtCurrent.type != NO_PIECE);
-            newMove.captureSquare = current;
+            newMove.from = from; newMove.to = current;
             LListAppendData(Move)(&moves, newMove);
         }
     }
@@ -150,7 +148,7 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
         if(pieceAtCurrent.type != NO_PIECE && pieceAtCurrent.color != color)
         {
             Move newMove = CLEAR_MOVE;
-            newMove.from = from; newMove.to = current; newMove.isCapture = true; newMove.captureSquare = current;
+            newMove.from = from; newMove.to = current;
 
             if(current.row == PAWN_PROMOTION_ROW[color])
             {
@@ -166,12 +164,11 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
             }
 
         }
-        else if(coordEquals(current, pos->en_passant) && pieceAtCurrent.type == NO_PIECE && color == pos->color_playing) //en passant
+        else if(CoordEquals(current, pos->en_passant) && pieceAtCurrent.type == NO_PIECE && color == pos->color_playing) //en passant
         {
-            Coord enPassantCaptureSquare = {pos->en_passant.file, pos->en_passant.row - PAWN_MOVING_DIRECTION[color]};
 
             Move newMove = CLEAR_MOVE;
-            newMove.from = from; newMove.to = current; newMove.isCapture = true; newMove.captureSquare = enPassantCaptureSquare;
+            newMove.from = from; newMove.to = current;
             LListAppendData(Move)(&moves, newMove);
         }
     }
@@ -198,8 +195,7 @@ LList(Move) KingMove(const Position* pos, Coord from, PieceColor color)
             if(pieceAtCurrent.type == NO_PIECE || pieceAtCurrent.color != color)
             {
                 Move newMove = CLEAR_MOVE;
-                newMove.from = from; newMove.to = current; newMove.isCapture = (pieceAtCurrent.type != NO_PIECE);
-                newMove.captureSquare = current;
+                newMove.from = from; newMove.to = current;
                 LListAppendData(Move)(&moves, newMove);
             }
 
@@ -212,10 +208,10 @@ LList(Move) KingMove(const Position* pos, Coord from, PieceColor color)
 bool isLegalMove(const Position* pos, Move* move)
 {
     Position new;
-    if(move->isCastling != NO_CASTLE)
+    if(move->castlingType != NO_CASTLE)
     {
         Coord cur = CASTLING_KING_START_COORD[pos->color_playing];
-        Coord dir = {move->isCastling == SHORT_CASTLE ? 1 : -1};
+        Coord dir = {move->castlingType == SHORT_CASTLE ? 1 : -1};
 
         for(int i=0; i <= 2; i++, COORD_ADD_SELF(cur, dir))
         {
@@ -242,11 +238,8 @@ LList(Move) getLegalMoves(const Position* pos)
 
             if (pieceAtCurrent.color != pos->color_playing) continue;
 
-            for (MoveType type = 0; type < N_MOVE_TYPES; type++) {
-                if (!PIECE_DATA[pieceAtCurrent.type].move_types.types[type]) continue;
+            LListExtend(Move)(&allMoves, MovesFromSquare(pos, current));
 
-                LListExtend(Move)(&allMoves, MOVE_TYPE_FUNCTION_LOOKUP[type](pos, current, pos->color_playing));
-            }
         }
     }
 
@@ -269,36 +262,44 @@ LList(Move) getLegalMoves(const Position* pos)
 
 void createMoveString(const Position* pos, Move* move)
 {
-    if(move->isCastling != NO_CASTLE)
+    if(move->castlingType != NO_CASTLE)
     {
         move->algebraicNotation[0] = 0;
-        strcpy(move->algebraicNotation, move->isCastling == SHORT_CASTLE ? "0-0" : "0-0-0");
+        strcpy(move->algebraicNotation, move->castlingType == SHORT_CASTLE ? "0-0" : "0-0-0");
 
         return;
     }
 
     int stringIndex = 0;
-    LListCreate(Coord, extraPiecesMovingThere);
-    Piece pieceMoving = getPieceAtCoord(pos, move->from);
-    CoordsTargetingCoord(pos, move->to, pieceMoving.color, PIECE_DATA[pieceMoving.type].move_types, &extraPiecesMovingThere);
+
+    Piece pieceMoving   = getPieceAtCoord(pos, move->from);
+    Piece pieceOnTarget = getPieceAtCoord(pos, move->to);
+
+    bool isCapture = (pieceOnTarget.type != NO_PIECE) || (pieceMoving.type == PAWN && CoordEquals(move->to, pos->en_passant));
+
+
 
     bool specifyFile = false, specifyRow = false;
-
 
 
     if(pieceMoving.type != PAWN)
     {
         Coord *c;
+        LListCreate(Coord, extraPiecesMovingThere);
+        CoordsTargetingCoord(pos, move->to, pieceMoving.color, PIECE_DATA[pieceMoving.type].move_types, &extraPiecesMovingThere);
+
         LListFORPTR(Coord, c, extraPiecesMovingThere)
         {
-            if(coordEquals(move->from, *c) || (getPieceAtCoord(pos, *c).type != pieceMoving.type)) continue;
+            if(CoordEquals(move->from, *c) || (getPieceAtCoord(pos, *c).type != pieceMoving.type)) continue;
             else if(move->from.row == c->row)   specifyFile = true;
             else if(move->from.file == c->file) specifyRow = true;
         }
 
+        LListFreeNodes(Coord)(&extraPiecesMovingThere);
+
         move->algebraicNotation[stringIndex++] = PIECE_DATA[pieceMoving.type].symbol;
     }
-    else if(move->isCapture)
+    else if(isCapture)
     {
         specifyFile = true;
     }
@@ -306,7 +307,7 @@ void createMoveString(const Position* pos, Move* move)
     if(specifyFile) move->algebraicNotation[stringIndex++] = CoordFileToChar(move->from.file);
     if(specifyRow)  move->algebraicNotation[stringIndex++] = CoordRowToChar(move->from.row);
 
-    if(move->isCapture) move->algebraicNotation[stringIndex++] = 'x';
+    if(isCapture) move->algebraicNotation[stringIndex++] = 'x';
 
     move->algebraicNotation[stringIndex++] = CoordFileToChar(move->to.file);
     move->algebraicNotation[stringIndex++] = CoordRowToChar(move->to.row);
@@ -340,17 +341,21 @@ void createMoveString(const Position* pos, Move* move)
 
 void playMove(const Position *pos, Move *move, Position *newPosition)
 {
+    Coord enPassantCache = pos->en_passant;
     *newPosition = *pos;
     newPosition->en_passant = DEFAULT_INVALID_COORD;
 
-    if(move->isCastling != NO_CASTLE)
+    newPosition->halfmoveClock++;
+    if(pos->color_playing == BLACK) newPosition->fullmoveNumber++;
+
+    if(move->castlingType != NO_CASTLE)
     {
 
         setPieceAtCoord(newPosition, CASTLING_KING_START_COORD[pos->color_playing], NO_PIECE_LITERAL);
-        setPieceAtCoord(newPosition, CASTLING_ROOK_START_COORD[pos->color_playing][move->isCastling], NO_PIECE_LITERAL);
+        setPieceAtCoord(newPosition, CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType], NO_PIECE_LITERAL);
 
-        setPieceAtCoord(newPosition, CASTLING_KING_TARGET_COORD[pos->color_playing][move->isCastling], (Piece){KING, newPosition->color_playing});
-        setPieceAtCoord(newPosition, CASTLING_ROOK_TARGET_COORD[pos->color_playing][move->isCastling], (Piece){ROOK, newPosition->color_playing});
+        setPieceAtCoord(newPosition, CASTLING_KING_TARGET_COORD[pos->color_playing][move->castlingType], (Piece){KING, newPosition->color_playing});
+        setPieceAtCoord(newPosition, CASTLING_ROOK_TARGET_COORD[pos->color_playing][move->castlingType], (Piece){ROOK, newPosition->color_playing});
 
         newPosition->castling_rights[newPosition->color_playing][SHORT_CASTLE] = false;
         newPosition->castling_rights[newPosition->color_playing][LONG_CASTLE]  = false;
@@ -358,8 +363,7 @@ void playMove(const Position *pos, Move *move, Position *newPosition)
     }
     else
     {
-        Piece pieceAtFromCache = getPieceAtCoord(pos, move->from);
-        Piece pieceMoving      = getPieceAtCoord(pos, move->from);
+        Piece pieceMoving = getPieceAtCoord(pos, move->from);
 
         if(pieceMoving.type == KING)
         {
@@ -370,28 +374,38 @@ void playMove(const Position *pos, Move *move, Position *newPosition)
         {
             for(CastlingMove castleType = SHORT_CASTLE; castleType <=LONG_CASTLE; castleType++)
             {
-                if(coordEquals(move->from, CASTLING_ROOK_START_COORD[pos->color_playing][castleType]))
+                if(CoordEquals(move->from, CASTLING_ROOK_START_COORD[pos->color_playing][castleType]))
                 {
                     newPosition->castling_rights[pos->color_playing][castleType] = false;
                 }
             }
         }
-        else if(pieceMoving.type == PAWN && move->from.row == PAWN_STARTING_ROW[pos->color_playing]
-                                         && move->to.row == (PAWN_STARTING_ROW[pos->color_playing] + 2 * PAWN_MOVING_DIRECTION[pos->color_playing]))
+        else if(pieceMoving.type == PAWN)
         {
+            newPosition->halfmoveClock = 0;
 
-            if(PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file-1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) ||
-               PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file+1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) )
+            /* En passant capture */
+            if(CoordEquals(move->to, enPassantCache))
+            {
+                Coord pawnTaken = {move->to.file, move->to.row - PAWN_MOVING_DIRECTION[pos->color_playing]};
+                setPieceAtCoord(newPosition, pawnTaken, NO_PIECE_LITERAL);
+            }
+            /* Move created new en passant square*/
+            else if(move->from.row == PAWN_STARTING_ROW[pos->color_playing] &&
+                    move->to.row == (PAWN_STARTING_ROW[pos->color_playing] + 2 * PAWN_MOVING_DIRECTION[pos->color_playing]) &&
+                    (PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file-1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) ||
+                     PieceEquals(getPieceAtCoord(pos, (Coord){move->to.file+1, move->to.row}), (Piece){PAWN, OTHER_COLOR(pos->color_playing)}) ))
             {
                 newPosition->en_passant = (Coord){move->from.file, move->from.row + PAWN_MOVING_DIRECTION[pos->color_playing]};
             }
         }
 
+        if(getPieceAtCoord(pos, move->to).type != NO_PIECE) newPosition->halfmoveClock = 0;
 
-
-        if(move->isCapture) setPieceAtCoord(newPosition, move->captureSquare, NO_PIECE_LITERAL);
-        setPieceAtCoord(newPosition, move->to, pieceAtFromCache);
+        setPieceAtCoord(newPosition, move->to, pieceMoving);
         setPieceAtCoord(newPosition, move->from, NO_PIECE_LITERAL);
+
+
 
         if(move->promotionType != NO_PIECE) setPieceAtCoord(newPosition, move->to, (Piece){move->promotionType, pos->color_playing});
     }
@@ -404,19 +418,19 @@ bool doesMoveExist(const Position *pos, Move *move)
 {
     if(!validCoord(move->from) || !validCoord(move->to)) return false;
 
-    if(move->isCastling != NO_CASTLE)
+    if(move->castlingType != NO_CASTLE)
     {
-        if(!(pos->castling_rights[pos->color_playing][move->isCastling])) return false;
+        if(!(pos->castling_rights[pos->color_playing][move->castlingType])) return false;
 
 
         if(!(PieceEquals(getPieceAtCoord(pos, CASTLING_KING_START_COORD[pos->color_playing]), (Piece){KING, pos->color_playing}) &&
-             PieceEquals(getPieceAtCoord(pos, CASTLING_ROOK_START_COORD[pos->color_playing][move->isCastling]), (Piece){ROOK, pos->color_playing}))) return false;
+             PieceEquals(getPieceAtCoord(pos, CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType]), (Piece){ROOK, pos->color_playing}))) return false;
 
-        Coord start = (move->isCastling == SHORT_CASTLE) ? CASTLING_KING_START_COORD[pos->color_playing] : CASTLING_ROOK_START_COORD[pos->color_playing][move->isCastling];
-        Coord stop  = (move->isCastling == SHORT_CASTLE) ? CASTLING_ROOK_START_COORD[pos->color_playing][move->isCastling] : CASTLING_KING_START_COORD[pos->color_playing];
+        Coord start = (move->castlingType == SHORT_CASTLE) ? CASTLING_KING_START_COORD[pos->color_playing] : CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType];
+        Coord stop  = (move->castlingType == SHORT_CASTLE) ? CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType] : CASTLING_KING_START_COORD[pos->color_playing];
 
         Coord direction = {1, 0};
-        for(COORD_ADD_SELF(start, direction); !coordEquals(start, stop); COORD_ADD_SELF(start, direction))
+        for(COORD_ADD_SELF(start, direction); !CoordEquals(start, stop); COORD_ADD_SELF(start, direction))
         {
             if(!PieceEquals(getPieceAtCoord(pos, start), NO_PIECE_LITERAL)) return false;
         }
@@ -424,30 +438,22 @@ bool doesMoveExist(const Position *pos, Move *move)
         return true;
     }
 
-    Piece pieceAtFrom = getPieceAtCoord(pos, move->from);
-
-    if(pieceAtFrom.color != pos->color_playing) return false;
+    LList(Move) moves = MovesFromSquare(pos, move->from);
 
     bool moveFound = false;
-    for(MoveType type = 0; !moveFound && type < N_MOVE_TYPES; type++)
+    Move *cur;
+    LListFORPTR(Move, cur, moves)
     {
-        if(!PIECE_DATA[pieceAtFrom.type].move_types.types[type]) continue;
-
-        LList(Move) moves = MOVE_TYPE_FUNCTION_LOOKUP[type](pos, move->from, pos->color_playing);
-        Move *cur;
-        LListFORPTR(Move, cur, moves)
+        if(CoordEquals(cur->to, move->to) && move->promotionType == cur->promotionType)
         {
-            if(coordEquals(cur->to, move->to) && move->promotionType == cur->promotionType)
-            {
-                // Get the move created by the engine (all data)
-                *move = *cur;
-                moveFound = true;
-                break;
-            }
+            // Get the move created by the engine (all data)
+            *move = *cur;
+            moveFound = true;
+            break;
         }
-
-        LListFreeNodes(Move)(&moves);
     }
+
+    LListFreeNodes(Move)(&moves);
 
     return moveFound;
 }
@@ -465,13 +471,13 @@ bool CreateMoveFromUCI(const char *uci, Move *move)
 
     for(PieceColor color = WHITE; color <= BLACK; color++)
     {
-        if(!coordEquals(move->from, CASTLING_KING_START_COORD[color])) continue;
+        if(!CoordEquals(move->from, CASTLING_KING_START_COORD[color])) continue;
 
         for(CastlingMove castle = SHORT_CASTLE; castle <= LONG_CASTLE; castle++)
         {
-            if(coordEquals(move->to, CASTLING_KING_TARGET_COORD[color][castle]))
+            if(CoordEquals(move->to, CASTLING_KING_TARGET_COORD[color][castle]))
             {
-                move->isCastling = castle;
+                move->castlingType = castle;
             }
         }
     }
@@ -479,28 +485,21 @@ bool CreateMoveFromUCI(const char *uci, Move *move)
 
     if(uci[4]) move->promotionType = PieceFromFENChar(uci[4]).type;
 
-    return !coordEquals(move->from, DEFAULT_INVALID_COORD) && !coordEquals(move->to, DEFAULT_INVALID_COORD);
+    return !CoordEquals(move->from, DEFAULT_INVALID_COORD) && !CoordEquals(move->to, DEFAULT_INVALID_COORD);
 }
 
 void DebugPrintMove(const Move* move)
 {
 
-    if(move->isCastling == NO_CASTLE)
+    if(move->castlingType == NO_CASTLE)
     {
         PrintCoordAlgebraic(move->from);
-        printf(" - ");
         PrintCoordAlgebraic(move->to);
 
-        if(move->isCapture)
-        {
-            printf(" x at ");
-            PrintCoordAlgebraic(move->captureSquare);
-        }
 
         if(move->promotionType != NO_PIECE)
         {
-            printf(" = %c", PIECE_DATA[move->promotionType].symbol);
-
+            printf("%c", tolower(PIECE_DATA[move->promotionType].symbol));
         }
 
     }
@@ -508,4 +507,21 @@ void DebugPrintMove(const Move* move)
     printf(" (%s)", move->algebraicNotation);
 
     printf("\n");
+}
+
+LList(Move) MovesFromSquare(const Position *pos, Coord square)
+{
+    LListCreate(Move, moves);
+
+    Piece pieceAtCurrent = getPieceAtCoord(pos, square);
+
+    if (pieceAtCurrent.color != pos->color_playing) return moves;
+
+    for (MoveType type = 0; type < N_MOVE_TYPES; type++) {
+        if (!PIECE_DATA[pieceAtCurrent.type].move_types.types[type]) continue;
+
+        LListExtend(Move)(&moves, MOVE_TYPE_FUNCTION_LOOKUP[type](pos, square, pos->color_playing));
+    }
+
+    return moves;
 }

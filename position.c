@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <ctype.h>
 #include <assert.h>
 
 
@@ -10,6 +9,8 @@
 LListDefinitions(Coord)
 
 const char castleTypes[] = {'K', 'Q', 'k', 'q'};
+
+static const int DRAW_HALFMOVES = 100;
 
 void PositionDebugPrint(const Position* pos)
 {
@@ -24,6 +25,8 @@ void PositionDebugPrint(const Position* pos)
 
         putchar('\n');
     }
+
+    printf("Half move clock: %d | Fullmove number: %d\n", pos->halfmoveClock, pos->fullmoveNumber);
 
     printf("En passant: ");
     if(validCoord(pos->en_passant))
@@ -119,6 +122,8 @@ Position CreatePositionFromFEN(const char* FEN)
     assert(*FEN == ' ');
     FEN++;
 
+    assert(sscanf(FEN, "%d %d", &newPos.halfmoveClock, &newPos.fullmoveNumber) == 2);
+
     return newPos;
 }
 
@@ -132,10 +137,7 @@ void setPieceAtCoord(Position* pos, Coord coord, Piece piece)
     if(validCoord(coord)) pos->position_grid[coord.file][coord.row] = piece;
 }
 
-//bool makeMove(Position* pos, Move* move)
-//{
-//    // make move, check if is legal, return true on success
-//}
+
 
 // Utility Function: Get the number (and locations) of squares attacking the target square
 // param data: NULL for no list creation, pointer to LList(Coord) to return the data
@@ -156,7 +158,7 @@ int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, Mo
         LListFORPTR(Move, move, moves)
         {
             Piece pieceAtTarget = getPieceAtCoord(pos, move->to);
-            if(move->isCapture && PIECE_DATA[pieceAtTarget.type].move_types.types[moveType])
+            if(pieceAtTarget.type != NO_PIECE && PIECE_DATA[pieceAtTarget.type].move_types.types[moveType])
             {
                 numberOfAttacks++;
 
@@ -170,6 +172,7 @@ int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, Mo
     return numberOfAttacks;
 }
 
+
 PositionState getPositionState(const Position *pos)
 {
     PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
@@ -182,10 +185,12 @@ PositionState getPositionState(const Position *pos)
      * If in check and no legal moves -> checkmate, if legal moves -> check.
      * If not in check and no legal moves -> draw*/
 
+    if(pos->halfmoveClock >= DRAW_HALFMOVES) return DRAW;
+
     bool inCheck = isInCheck(pos, pos->color_playing);
 
     LList(Move) legalMoves = getLegalMoves(pos);
-    int legalMoveCount = legalMoves.length;
+    int legalMoveCount = (int) legalMoves.length;
 
     LListFreeNodes(Move)(&legalMoves);
 
@@ -210,6 +215,7 @@ bool isInCheck(const Position *pos, PieceColor color)
             if(PieceEquals(pieceAtCurrent, (Piece){KING, color}))
             {
                 kingPosition = current;
+                found = true;
                 break;
             }
         }
@@ -220,35 +226,6 @@ bool isInCheck(const Position *pos, PieceColor color)
 
 bool isPositionLegal(const Position* pos)
 {
-//    PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
-//
-//
-//    Coord kingPositions[2] = {DEFAULT_INVALID_COORD, DEFAULT_INVALID_COORD};
-//
-//    Coord current;
-//    for(current.file = FILE_A; current.file <= FILE_H; current.file++)
-//        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
-//        {
-//            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
-//
-//            if(pieceAtCurrent.type == KING)
-//            {
-//                // More than one kings for one color in position -> INVALID
-//                if(!coordEquals(kingPositions[pieceAtCurrent.color], DEFAULT_INVALID_COORD))
-//                    return false;
-//
-//                kingPositions[pieceAtCurrent.color] = current;
-//
-//            }
-//        }
-//
-//    // No kings found for some color -> INVALID
-//    if(IS_DEFAULT_INVALID_COORD(kingPositions[WHITE]) || IS_DEFAULT_INVALID_COORD(kingPositions[BLACK]))
-//        return false;
-//
-//
-//    // If the color not playing is in check, the position is invalid
-//    return CoordsTargetingCoord(pos, kingPositions[colorNotPlaying], pos->color_playing, (MoveTypes){1,1,1,1,1}, NULL) == 0;
 
     return !isInCheck(pos, OTHER_COLOR(pos->color_playing));
 }

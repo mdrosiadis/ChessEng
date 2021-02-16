@@ -18,15 +18,10 @@ typedef struct move
     Coord from;
     Coord to;
 
-    CastlingMove isCastling;
+    CastlingMove castlingType;
+    PieceType promotionType;
 
     char algebraicNotation[MAX_ALGEBRAIC_NOTATION_STRING];
-
-    // easy way around en passant
-    bool isCapture;
-    Coord captureSquare;
-
-    PieceType promotionType;
 } Move;
 
 
@@ -40,6 +35,8 @@ LList(Move) CrossMove(const Position* pos, Coord from, PieceColor color);
 LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color);
 LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color);
 LList(Move) KingMove(const Position* pos, Coord from, PieceColor color);
+
+LList(Move) MovesFromSquare(const Position *pos, Coord square);
 
 bool isLegalMove(const Position* pos, Move* move);
 LList(Move) getLegalMoves(const Position* pos);
