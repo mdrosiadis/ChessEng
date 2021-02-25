@@ -51,6 +51,7 @@ bool isInCheck(const Position *pos, PieceColor color);
 
 
 void PositionDebugPrint(const Position* pos);
+void CreateFENString(const Position *pos);
 
 
 #endif //CHEESENG_POSITION_H

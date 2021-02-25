@@ -6,6 +6,7 @@
 #include "move.h"
 #include "coord.h"
 
+
 LListDefinitions(Move)
 
 static const Coord DIAGONAL_DIRECTIONS[] = {{-1, -1}, {1, 1}, {-1, 1}, {1, -1}};

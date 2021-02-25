@@ -19,40 +19,73 @@ int main() {
     while((state = getPositionState(&fen)) == NORMAL || state == CHECK)
     {
         PositionDebugPrint(&fen);
-        printf("UCI (q to stop): ");
-        fgets(inputmove, 24, stdin);
-        inputmove[strlen(inputmove)-1] = 0; /* remove newline */
+        CreateFENString(&fen);
+        printf("\n");
 
-        if(!strcmp(inputmove, "q")) break;
-
-        if(CreateMoveFromUCI(inputmove, &pendingMove))
+        if(fen.color_playing == WHITE)
         {
-            printf("Syntax correct!\n");
+            printf("UCI (q to stop): ");
+            fgets(inputmove, 24, stdin);
+            inputmove[strlen(inputmove)-1] = 0; /* remove newline */
 
-            if(doesMoveExist(&fen, &pendingMove))
+            if(!strcmp(inputmove, "q")) break;
+
+            if(CreateMoveFromUCI(inputmove, &pendingMove))
             {
-                printf("Move exists!\n");
+                printf("Syntax correct!\n");
 
-                if(isLegalMove(&fen, &pendingMove))
+                if(doesMoveExist(&fen, &pendingMove))
                 {
-                    printf("Move is Legal! Move is: ");
-                    createMoveString(&fen, &pendingMove);
-                    DebugPrintMove(&pendingMove);
-                    playMove(&fen, &pendingMove, &fen);
+                    printf("Move exists!\n");
+
+                    if(isLegalMove(&fen, &pendingMove))
+                    {
+                        printf("Move is Legal! Move is: ");
+                        createMoveString(&fen, &pendingMove);
+                        DebugPrintMove(&pendingMove);
+                        playMove(&fen, &pendingMove, &fen);
+                    }
+                    else
+                    {
+                        printf("Not a legal move!\n");
+                    }
                 }
                 else
                 {
-                    printf("Not a legal move!\n");
+                    printf("Move doesnt exist on the board!\n");
                 }
             }
             else
             {
-                printf("Move doesnt exist on the board!\n");
+                printf("Bad UCI!\n");
             }
         }
         else
         {
-            printf("Bad UCI!\n");
+            // random black player
+            LList(Move) moves = getLegalMoves(&fen);
+            Move* move;
+            LListFORPTR(Move, move, moves)
+            {
+                createMoveString(&fen, move);
+                DebugPrintMove(move);
+            }
+
+            int randomIndex = rand() % moves.length;
+
+            int i = 0;
+            LListFORPTR(Move, move, moves)
+            {
+                if(randomIndex == i)
+                {
+                    playMove(&fen, move, &fen);
+                    break;
+                }
+
+                i++;
+            }
+
+            LListFreeNodes(Move)(&moves);
         }
     }
 

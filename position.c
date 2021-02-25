@@ -127,6 +127,60 @@ Position CreatePositionFromFEN(const char* FEN)
     return newPos;
 }
 
+void CreateFENString(const Position *pos)
+{
+    for(int row = BOARD_SIZE-1; row >= 0; row--)
+    {
+        int noPieceRunning = 0;
+        for(int file = 0; file < BOARD_SIZE; file++)
+        {
+            Piece currentPiece = getPieceAtCoord(pos, (Coord){file, row});
+
+            if(currentPiece.type != NO_PIECE)
+            {
+                if(noPieceRunning) printf("%d", noPieceRunning);
+
+                putchar(PieceFENChar(currentPiece));
+                noPieceRunning = 0;
+            }
+            else
+            {
+                noPieceRunning++;
+            }
+
+        }
+
+        if(noPieceRunning) printf("%d", noPieceRunning);
+
+        if(row != 0) putchar('/');
+
+    }
+
+    printf(" %c ", pos->color_playing == WHITE ? 'w' : 'b');
+
+    bool anyCastlingRights = false;
+    for(int i=0; i < 4; i++)
+    {
+        if(pos->castling_rights[i/2][i%2])
+        {
+            putchar(castleTypes[i]);
+            anyCastlingRights = true;
+        }
+    }
+
+    if(!anyCastlingRights) putchar('-');
+
+    putchar(' ');
+
+    if(validCoord(pos->en_passant))
+        PrintCoordAlgebraic(pos->en_passant);
+    else
+        putchar('-');
+
+    printf(" %d %d", pos->halfmoveClock, pos->fullmoveNumber);
+
+}
+
 Piece getPieceAtCoord(const Position* pos, Coord coord)
 {
     return validCoord(coord) ? pos->position_grid[coord.file][coord.row] : NO_PIECE_LITERAL;
