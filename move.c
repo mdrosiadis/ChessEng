@@ -244,8 +244,21 @@ LList(Move) getLegalMoves(const Position* pos)
         }
     }
 
-    if(doesMoveExist(pos, &SHORT_CASTLE_MOVE)) LListAppendData(Move)(&allMoves, SHORT_CASTLE_MOVE);
-    if(doesMoveExist(pos, &LONG_CASTLE_MOVE))  LListAppendData(Move)(&allMoves, LONG_CASTLE_MOVE);
+    if(doesMoveExist(pos, &SHORT_CASTLE_MOVE))
+    {
+        Move withUci = SHORT_CASTLE_MOVE;
+        withUci.from = CASTLING_KING_START_COORD[pos->color_playing];
+        withUci.to   = CASTLING_KING_TARGET_COORD[pos->color_playing][SHORT_CASTLE];
+        LListAppendData(Move)(&allMoves, withUci);
+    }
+
+    if(doesMoveExist(pos, &LONG_CASTLE_MOVE))
+    {
+        Move withUci = SHORT_CASTLE_MOVE;
+        withUci.from = CASTLING_KING_START_COORD[pos->color_playing];
+        withUci.to   = CASTLING_KING_TARGET_COORD[pos->color_playing][LONG_CASTLE];
+        LListAppendData(Move)(&allMoves, withUci);
+    }
 
     LListCreate(Move, legalMoves);
     Move* move;
@@ -419,24 +432,41 @@ bool doesMoveExist(const Position *pos, Move *move)
 {
     if(!validCoord(move->from) || !validCoord(move->to)) return false;
 
-    if(move->castlingType != NO_CASTLE)
+    if(CoordEquals(move->from, CASTLING_KING_START_COORD[pos->color_playing]) &&
+       PieceEquals(getPieceAtCoord(pos, CASTLING_KING_START_COORD[pos->color_playing]), (Piece){KING, pos->color_playing}))
     {
-        if(!(pos->castling_rights[pos->color_playing][move->castlingType])) return false;
 
-
-        if(!(PieceEquals(getPieceAtCoord(pos, CASTLING_KING_START_COORD[pos->color_playing]), (Piece){KING, pos->color_playing}) &&
-             PieceEquals(getPieceAtCoord(pos, CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType]), (Piece){ROOK, pos->color_playing}))) return false;
-
-        Coord start = (move->castlingType == SHORT_CASTLE) ? CASTLING_KING_START_COORD[pos->color_playing] : CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType];
-        Coord stop  = (move->castlingType == SHORT_CASTLE) ? CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType] : CASTLING_KING_START_COORD[pos->color_playing];
-
-        Coord direction = {1, 0};
-        for(COORD_ADD_SELF(start, direction); !CoordEquals(start, stop); COORD_ADD_SELF(start, direction))
+        CastlingMove castlingType;
+        for(castlingType = SHORT_CASTLE; castlingType < NO_CASTLE; castlingType++)
         {
-            if(!PieceEquals(getPieceAtCoord(pos, start), NO_PIECE_LITERAL)) return false;
+            if(CoordEquals(move->to, CASTLING_KING_TARGET_COORD[pos->color_playing][castlingType])) break;
         }
 
-        return true;
+        // if it is a castling move, make the necessary checks, otherwise it might be a king move
+        if(castlingType != NO_CASTLE)
+        {
+            // Set the move's castling type
+            move->castlingType = castlingType;
+
+            // Check for castling rights
+            if(!(pos->castling_rights[pos->color_playing][move->castlingType])) return false;
+
+
+            if(!PieceEquals(getPieceAtCoord(pos, CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType]),
+                            (Piece) {ROOK, pos->color_playing})) return false;
+
+            Coord start = (move->castlingType == SHORT_CASTLE) ? CASTLING_KING_START_COORD[pos->color_playing] : CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType];
+            Coord stop  = (move->castlingType == SHORT_CASTLE) ? CASTLING_ROOK_START_COORD[pos->color_playing][move->castlingType] : CASTLING_KING_START_COORD[pos->color_playing];
+
+            Coord direction = {1, 0};
+            for(COORD_ADD_SELF(start, direction); !CoordEquals(start, stop); COORD_ADD_SELF(start, direction))
+            {
+                if(!PieceEquals(getPieceAtCoord(pos, start), NO_PIECE_LITERAL)) return false;
+            }
+
+            return true;
+        }
+
     }
 
     LList(Move) moves = MovesFromSquare(pos, move->from);
@@ -470,19 +500,6 @@ bool CreateMoveFromUCI(const char *uci, Move *move)
     move->from = CoordFromAlgebraic(uci);
     move->to   = CoordFromAlgebraic(uci + 2);
 
-    for(PieceColor color = WHITE; color <= BLACK; color++)
-    {
-        if(!CoordEquals(move->from, CASTLING_KING_START_COORD[color])) continue;
-
-        for(CastlingMove castle = SHORT_CASTLE; castle <= LONG_CASTLE; castle++)
-        {
-            if(CoordEquals(move->to, CASTLING_KING_TARGET_COORD[color][castle]))
-            {
-                move->castlingType = castle;
-            }
-        }
-    }
-
 
     if(uci[4]) move->promotionType = PieceFromFENChar(uci[4]).type;
 
@@ -491,18 +508,12 @@ bool CreateMoveFromUCI(const char *uci, Move *move)
 
 void DebugPrintMove(const Move* move)
 {
+    PrintCoordAlgebraic(move->from);
+    PrintCoordAlgebraic(move->to);
 
-    if(move->castlingType == NO_CASTLE)
+    if(move->promotionType != NO_PIECE)
     {
-        PrintCoordAlgebraic(move->from);
-        PrintCoordAlgebraic(move->to);
-
-
-        if(move->promotionType != NO_PIECE)
-        {
-            printf("%c", tolower(PIECE_DATA[move->promotionType].symbol));
-        }
-
+        printf("%c", tolower(PIECE_DATA[move->promotionType].symbol));
     }
 
     printf(" (%s)", move->algebraicNotation);
