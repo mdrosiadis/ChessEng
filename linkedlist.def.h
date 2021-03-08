@@ -12,7 +12,7 @@
 #define LListRemoveNode(DATATYPE) LList_##DATATYPE##_RemoveNode
 
 #define LListFOR(DATATYPE, elem, list) \
-for(Node_##DATATYPE *node = list.head, *tmp; node && ((tmp = node->next) || 1) && ((elem = node->data) || 1) ; node = tmp)
+for(Node_##DATATYPE *node = list.head, *tmp; node && ((tmp = node->next) || 1) && ((elem = node->data)) ; node = tmp)
 
 #define LListFORPTR(DATATYPE, elem, list) \
 for(Node_##DATATYPE *node = list.head, *tmp; node && ((tmp = node->next) || 1) && ((elem = &(node->data)) || 1) ; node = tmp)
