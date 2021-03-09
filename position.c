@@ -6,7 +6,6 @@
 #include "move.h"
 
 
-LListDefinitions(Coord)
 
 const char castleTypes[] = {'K', 'Q', 'k', 'q'};
 
@@ -46,6 +45,7 @@ Position CreatePositionFromFEN(const char* FEN)
     int file = 0, row = BOARD_SIZE -1;
 
     newPos.en_passant = DEFAULT_INVALID_COORD;
+    newPos.metadata = NULL;
 
     // Position data
     for(; *FEN && !(row == 0 && file == BOARD_SIZE); FEN++)
@@ -194,10 +194,10 @@ void setPieceAtCoord(Position* pos, Coord coord, Piece piece)
 
 
 // Utility Function: Get the number (and locations) of squares attacking the target square
-// param data: NULL for no list creation, pointer to LList(Coord) to return the data
+// param data: NULL for no list creation, pointer to Darray(Coord) to return the data
 // return: number of squares / pieces found attacking the target square
 // PURPOSE OF EXISTENCE OF THIS FUNCTION: dont create a list of potential attacks if we only need the number of them
-int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data)
+int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, Darray(Coord) *data)
 {
     int numberOfAttacks = 0;
     PieceColor castingAs = OTHER_COLOR(color);
@@ -206,21 +206,20 @@ int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, Mo
     {
         if(!castingTypes.types[moveType]) continue;
 
-        LList(Move) moves = MOVE_TYPE_FUNCTION_LOOKUP[moveType](pos, target, castingAs);
+        Darray(Move) moves = MOVE_TYPE_FUNCTION_LOOKUP[moveType](pos, target, castingAs);
 
-        Move* move;
-        LListFORPTR(Move, move, moves)
+        for(unsigned int i = 0; i < moves.length; i++)
         {
-            Piece pieceAtTarget = getPieceAtCoord(pos, move->to);
+            Piece pieceAtTarget = getPieceAtCoord(pos, moves.data[i].to);
             if(pieceAtTarget.type != NO_PIECE && PIECE_DATA[pieceAtTarget.type].move_types.types[moveType])
             {
                 numberOfAttacks++;
 
-                if(data) LListAppendData(Coord)(data, move->to);
+                if(data) DarrayPush(Coord)(data, moves.data[i].to);
             }
         }
 
-        LListFreeNodes(Move)(&moves);
+        DarrayFree(Move)(&moves);
     }
 
     return numberOfAttacks;
@@ -231,50 +230,37 @@ PositionState getPositionState(const Position *pos)
 {
     PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
 
+    if(! pos->metadata) CreatePositionMetadata(pos);
 
-    // If the color not playing is in check, the position is invalid
-    if(isInCheck(pos, colorNotPlaying)) return INVALID;
-
-    /* Check for checks and legal moves.
-     * If in check and no legal moves -> checkmate, if legal moves -> check.
-     * If not in check and no legal moves -> draw*/
-
-    if(pos->halfmoveClock >= DRAW_HALFMOVES) return DRAW;
-
-    bool inCheck = isInCheck(pos, pos->color_playing);
-
-    LList(Move) legalMoves = getLegalMoves(pos);
-    int legalMoveCount = (int) legalMoves.length;
-
-    LListFreeNodes(Move)(&legalMoves);
-
-    if(inCheck)
-        return legalMoveCount > 0 ? CHECK : CHECKMATE;
-    else
-        return legalMoveCount > 0 ? NORMAL : DRAW;
+    //printf("pos state\n");
+    return pos->metadata->state;
 }
 
 bool isInCheck(const Position *pos, PieceColor color)
 {
-    Coord kingPosition = DEFAULT_INVALID_COORD;
-    Coord current;
-
-    bool found = false;
-
-    for(current.file = FILE_A; !found && current.file <= FILE_H; current.file++)
-        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
-        {
-            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
-
-            if(PieceEquals(pieceAtCurrent, (Piece){KING, color}))
+    Coord kingPos;
+    if(pos->metadata)
+        kingPos = pos->metadata->kingPositions[color];
+    else
+    {
+        bool found = false;
+        Coord current;
+        for(current.file = FILE_A; !found && current.file <= FILE_H; current.file++)
+            for(current.row = ROW_1; current.row <= ROW_8; current.row++)
             {
-                kingPosition = current;
-                found = true;
-                break;
-            }
-        }
+                Piece pieceAtCurrent = getPieceAtCoord(pos, current);
 
-    return CoordsTargetingCoord(pos, kingPosition, OTHER_COLOR(color), (MoveTypes){1,1,1,1,1}, NULL) != 0;
+                if(PieceEquals(pieceAtCurrent, (Piece){KING, color}))
+                {
+                    kingPos = current;
+                    found = true;
+                }
+            }
+    }
+
+    //PrintCoordAlgebraic(kingPos);
+
+    return CoordsTargetingCoord(pos, kingPos, OTHER_COLOR(color), (MoveTypes){1,1,1,1,1}, NULL) != 0;
 }
 
 
@@ -291,3 +277,69 @@ inline bool isPositionPlayable(const Position *pos)
     return state == NORMAL || state == CHECK;
 }
 
+
+
+void CreatePositionMetadata(Position *pos)
+{
+    if(pos->metadata) return;
+
+    pos->metadata = malloc(sizeof (PositionMetadata));
+
+
+    pos->metadata->legalMoves = createLegalMoves(pos);
+    Coord current;
+    int found = 0;
+
+    for(current.file = FILE_A; found < 2 && current.file <= FILE_H; current.file++)
+        for(current.row = ROW_1; current.row <= ROW_8; current.row++)
+        {
+            Piece pieceAtCurrent = getPieceAtCoord(pos, current);
+
+            if(pieceAtCurrent.type == KING)
+            {
+                pos->metadata->kingPositions[pieceAtCurrent.color] = current;
+                found++;
+            }
+        }
+
+    PieceColor colorNotPlaying = OTHER_COLOR(pos->color_playing);
+
+    //printf("meta-check\n");
+    // If the color not playing is in check, the position is invalid
+    if(isInCheck(pos, colorNotPlaying))
+        pos->metadata->state =  INVALID;
+
+    else if(pos->halfmoveClock >= DRAW_HALFMOVES)
+        pos->metadata->state = DRAW;
+
+    else
+    {
+        /* Check for checks and legal moves.
+     * If in check and no legal moves -> checkmate, if legal moves -> check.
+     * If not in check and no legal moves -> draw*/
+
+        bool inCheck = isInCheck(pos, pos->color_playing);
+
+        int legalMoveCount = (int) pos->metadata->legalMoves.length;
+
+
+        if(inCheck)
+            pos->metadata->state = legalMoveCount > 0 ? CHECK : CHECKMATE;
+        else
+            pos->metadata->state = legalMoveCount > 0 ? NORMAL : DRAW;
+    }
+
+}
+
+void FreeMetadata(PositionMetadata *meta)
+{
+    if(!meta) return;
+    DarrayFree(Move)(&(meta->legalMoves));
+    free(meta);
+}
+
+void ClearPositionMetadata(Position *pos)
+{
+    FreeMetadata(pos->metadata);
+    pos->metadata = NULL;
+}

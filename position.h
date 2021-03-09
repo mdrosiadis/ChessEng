@@ -7,19 +7,32 @@
 
 #include "coord.h"
 #include "piece.h"
+#include "movetypes.h"
 
-#include "linkedlist.def.h"
-
-
-LListDeclarations(Coord)
+#include "darray.def.h"
 
 
+
+DarrayDeclarations(Coord)
+DarrayDeclarations(Move)
 
 
 #define BOARD_SIZE 8
 #define MAX_PIECES 32
 #define PLAYER_COUNT 2
 
+typedef enum positionstate {NORMAL, CHECK, CHECKMATE, DRAW, INVALID} PositionState;
+
+typedef struct posmeta
+{
+    Darray(Move) legalMoves;
+    PositionState state;
+
+    Coord kingPositions[2];
+
+
+
+} PositionMetadata;
 
 typedef struct position
 {
@@ -33,17 +46,21 @@ typedef struct position
 
     int halfmoveClock, fullmoveNumber;
 
+    PositionMetadata *metadata;
+
 } Position;
 
-typedef enum positionstate {NORMAL, CHECK, CHECKMATE, DRAW, INVALID} PositionState;
 
+void CreatePositionMetadata(Position *pos);
+void FreeMetadata(PositionMetadata *meta);
+void ClearPositionMetadata(Position *pos);
 
 
 Piece getPieceAtCoord(const Position* pos, Coord coord);
 void setPieceAtCoord(Position* pos, Coord coord, Piece piece);
 Position CreatePositionFromFEN(const char* FEN);
 
-int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, LList(Coord) *data);
+int CoordsTargetingCoord(const Position* pos, Coord target, PieceColor color, MoveTypes castingTypes, Darray(Coord) *data);
 PositionState getPositionState(const Position *pos);
 bool isPositionLegal(const Position* pos);
 bool isPositionPlayable(const Position *pos);

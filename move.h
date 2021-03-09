@@ -6,40 +6,42 @@
 #include "coord.h"
 #include "position.h"
 
-#include "linkedlist.def.h"
 
-#define MAX_ALGEBRAIC_NOTATION_STRING 11
+#include "darray.def.h"
 
-typedef enum castlingmoves{SHORT_CASTLE, LONG_CASTLE, NO_CASTLE} CastlingMove;
-
-
-typedef struct move
-{
-    Coord from;
-    Coord to;
-
-    CastlingMove castlingType;
-    PieceType promotionType;
-
-    char algebraicNotation[MAX_ALGEBRAIC_NOTATION_STRING];
-} Move;
+#include "movetypes.h"
 
 
+//typedef enum castlingmoves{SHORT_CASTLE, LONG_CASTLE, NO_CASTLE} CastlingMove;
 
-LListDeclarations(Move)
+//
+//typedef struct move
+//{
+//    Coord from;
+//    Coord to;
+//
+//    CastlingMove castlingType;
+//    PieceType promotionType;
+//
+//    char algebraicNotation[MAX_ALGEBRAIC_NOTATION_STRING];
+//} Move;
 
-extern LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor);
 
-LList(Move) DiagonalMove(const Position* pos, Coord from, PieceColor color);
-LList(Move) CrossMove(const Position* pos, Coord from, PieceColor color);
-LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color);
-LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color);
-LList(Move) KingMove(const Position* pos, Coord from, PieceColor color);
 
-LList(Move) MovesFromSquare(const Position *pos, Coord square);
+
+extern Darray(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor);
+
+Darray(Move) DiagonalMove(const Position* pos, Coord from, PieceColor color);
+Darray(Move) CrossMove(const Position* pos, Coord from, PieceColor color);
+Darray(Move) KnightMove(const Position* pos, Coord from, PieceColor color);
+Darray(Move) PawnMove(const Position* pos, Coord from, PieceColor color);
+Darray(Move) KingMove(const Position* pos, Coord from, PieceColor color);
+
+Darray(Move) MovesFromSquare(const Position *pos, Coord square);
 
 bool isLegalMove(const Position* pos, Move* move);
-LList(Move) getLegalMoves(const Position* pos);
+Darray(Move) createLegalMoves(Position* pos);
+Darray(Move) getLegalMoves(Position* pos);
 
 bool doesMoveExist(const Position *pos, Move *move);
 void playMove(const Position *pos, Move *move, Position *newPosition);

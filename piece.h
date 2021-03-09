@@ -3,12 +3,12 @@
 
 #include <stdbool.h>
 
-#include "movetypes.h"
-
 
 
 typedef enum PieceType{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE} PieceType;
 typedef enum PieceColor{WHITE, BLACK, NO_COLOR} PieceColor;
+
+#include "movetypes.h"
 
 #define OTHER_COLOR(color) ((color == WHITE) ? BLACK : WHITE)
 

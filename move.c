@@ -7,7 +7,8 @@
 #include "coord.h"
 
 
-LListDefinitions(Move)
+DarrayDefinitions(Move)
+DarrayDefinitions(Coord)
 
 static const Coord DIAGONAL_DIRECTIONS[] = {{-1, -1}, {1, 1}, {-1, 1}, {1, -1}};
 static const Coord CROSS_DIRECTIONS[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
@@ -24,7 +25,7 @@ static const CoordRow PAWN_PROMOTION_ROW[2] = {ROW_8, ROW_1};
 
 static const int PAWN_MOVING_DIRECTION[2] = {1, -1};
 
-LList(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor) =
+Darray(Move) (* const MOVE_TYPE_FUNCTION_LOOKUP[N_MOVE_TYPES])(const Position*, Coord, PieceColor) =
         {DiagonalMove, CrossMove, KnightMove, PawnMove, KingMove};
 
 #define COORD_ADD_SELF(a, b) (a).file+=(b).file, (a).row+=(b).row
@@ -35,7 +36,7 @@ static Move SHORT_CASTLE_MOVE = {.castlingType = SHORT_CASTLE};
 static Move LONG_CASTLE_MOVE  = {.castlingType = LONG_CASTLE };
 
 #define LINE_MOVES(DIRSET) \
-    LListCreate(Move, moves);\
+    Darray(Move) moves = DarrayInit(Move)(20);\
     for(int dir = 0; dir < 4; dir++) \
     { \
         Coord current = from;\
@@ -52,7 +53,7 @@ static Move LONG_CASTLE_MOVE  = {.castlingType = LONG_CASTLE };
 \
                 if(pieceAtCurrent.color != color) \
                 {\
-                    LListAppendData(Move)(&moves, newMove); \
+                    DarrayPush(Move)(&moves, newMove);\
                 } \
 \
 \
@@ -60,25 +61,25 @@ static Move LONG_CASTLE_MOVE  = {.castlingType = LONG_CASTLE };
             } \
 \
             /* Otherwise, we can make a regular move on square current */ \
-            LListAppendData(Move)(&moves, newMove); \
+            DarrayPush(Move)(&moves, newMove); \
         } \
     } \
     return moves;
 
-LList(Move) DiagonalMove(const Position* pos, Coord from, PieceColor color)
+Darray(Move) DiagonalMove(const Position* pos, Coord from, PieceColor color)
 {
     LINE_MOVES(DIAGONAL_DIRECTIONS)
 }
 
-LList(Move) CrossMove(const Position* pos, Coord from, PieceColor color)
+Darray(Move) CrossMove(const Position* pos, Coord from, PieceColor color)
 {
     LINE_MOVES(CROSS_DIRECTIONS)
 }
 
 
-LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color)
+Darray(Move) KnightMove(const Position* pos, Coord from, PieceColor color)
 {
-    LListCreate(Move, moves);
+    Darray(Move) moves = DarrayInit(Move)(8);
     for(int move=0; move < 8; move++)
     {
         Coord current = from;
@@ -93,16 +94,16 @@ LList(Move) KnightMove(const Position* pos, Coord from, PieceColor color)
         {
             Move newMove = CLEAR_MOVE;
             newMove.from = from; newMove.to = current;
-            LListAppendData(Move)(&moves, newMove);
+            DarrayPush(Move)(&moves, newMove);
         }
     }
 
     return moves;
 }
 
-LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
+Darray(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
 {
-    LListCreate(Move, moves);
+    Darray(Move) moves = DarrayInit(Move)(5);
 
     Coord captures[] = {{-1, PAWN_MOVING_DIRECTION[color]}, {1, PAWN_MOVING_DIRECTION[color]}};
 
@@ -126,12 +127,12 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
             for(PieceType type = KNIGHT; type <= QUEEN; type++)
             {
                 newMove.promotionType = type;
-                LListAppendData(Move)(&moves, newMove);
+                DarrayPush(Move)(&moves, newMove);
             }
         }
         else
         {
-            LListAppendData(Move)(&moves, newMove);
+            DarrayPush(Move)(&moves, newMove);
         }
 
     }
@@ -156,12 +157,12 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
                 for(PieceType type = KNIGHT; type <= QUEEN; type++)
                 {
                     newMove.promotionType = type;
-                    LListAppendData(Move)(&moves, newMove);
+                    DarrayPush(Move)(&moves, newMove);
                 }
             }
             else
             {
-                LListAppendData(Move)(&moves, newMove);
+                DarrayPush(Move)(&moves, newMove);
             }
 
         }
@@ -170,7 +171,7 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
 
             Move newMove = CLEAR_MOVE;
             newMove.from = from; newMove.to = current;
-            LListAppendData(Move)(&moves, newMove);
+            DarrayPush(Move)(&moves, newMove);
         }
     }
 
@@ -178,9 +179,9 @@ LList(Move) PawnMove(const Position* pos, Coord from, PieceColor color)
 }
 
 
-LList(Move) KingMove(const Position* pos, Coord from, PieceColor color)
+Darray(Move) KingMove(const Position* pos, Coord from, PieceColor color)
 {
-    LListCreate(Move, moves);
+    Darray(Move) moves = DarrayInit(Move)(10);
     Coord current;
     for(int file=-1; file <= 1; file++)
         for(int row=-1; row <= 1; row++)
@@ -197,7 +198,7 @@ LList(Move) KingMove(const Position* pos, Coord from, PieceColor color)
             {
                 Move newMove = CLEAR_MOVE;
                 newMove.from = from; newMove.to = current;
-                LListAppendData(Move)(&moves, newMove);
+                DarrayPush(Move)(&moves, newMove);
             }
 
         }
@@ -222,14 +223,12 @@ bool isLegalMove(const Position* pos, Move* move)
 
     playMove(pos, move, &new);
 
-
-
     return isPositionLegal(&new);
 }
 
-LList(Move) getLegalMoves(const Position* pos)
+Darray(Move) createLegalMoves(Position* pos)
 {
-    LListCreate(Move, allMoves);
+    Darray(Move) allMoves = DarrayInit(Move)(10);
     Coord current;
 
     for(current.file = FILE_A; current.file <= FILE_H; current.file++) {
@@ -239,8 +238,11 @@ LList(Move) getLegalMoves(const Position* pos)
 
             if (pieceAtCurrent.color != pos->color_playing) continue;
 
-            LListExtend(Move)(&allMoves, MovesFromSquare(pos, current));
+            Darray(Move) movesToAdd = MovesFromSquare(pos, current);
 
+            DarrayExtend(Move)(&allMoves, &movesToAdd);
+
+            DarrayFree(Move)(&movesToAdd);
         }
     }
 
@@ -249,7 +251,7 @@ LList(Move) getLegalMoves(const Position* pos)
         Move withUci = SHORT_CASTLE_MOVE;
         withUci.from = CASTLING_KING_START_COORD[pos->color_playing];
         withUci.to   = CASTLING_KING_TARGET_COORD[pos->color_playing][SHORT_CASTLE];
-        LListAppendData(Move)(&allMoves, withUci);
+        DarrayPush(Move)(&allMoves, withUci);
     }
 
     if(doesMoveExist(pos, &LONG_CASTLE_MOVE))
@@ -257,21 +259,27 @@ LList(Move) getLegalMoves(const Position* pos)
         Move withUci = SHORT_CASTLE_MOVE;
         withUci.from = CASTLING_KING_START_COORD[pos->color_playing];
         withUci.to   = CASTLING_KING_TARGET_COORD[pos->color_playing][LONG_CASTLE];
-        LListAppendData(Move)(&allMoves, withUci);
+        DarrayPush(Move)(&allMoves, withUci);
     }
 
-    LListCreate(Move, legalMoves);
-    Move* move;
+    Darray(Move) legalMoves = DarrayInit(Move)(allMoves.length);
 
-    LListFORPTR(Move, move, allMoves)
+    for(unsigned int i = 0; i < allMoves.length; i++)
     {
-        if(isLegalMove(pos, move)) LListAppendData(Move)(&legalMoves, *move);
+        if(isLegalMove(pos, &allMoves.data[i])) DarrayPush(Move)(&legalMoves, allMoves.data[i]);
     }
 
-    LListFreeNodes(Move)(&allMoves);
+    DarrayFree(Move)(&allMoves);
 
 
     return legalMoves;
+}
+
+Darray(Move) getLegalMoves(Position* pos)
+{
+    if(! pos->metadata) CreatePositionMetadata(pos);
+
+    return pos->metadata->legalMoves;
 }
 
 void createMoveString(const Position* pos, Move* move)
@@ -299,17 +307,18 @@ void createMoveString(const Position* pos, Move* move)
     if(pieceMoving.type != PAWN)
     {
         Coord *c;
-        LListCreate(Coord, extraPiecesMovingThere);
+        Darray(Coord) extraPiecesMovingThere = DarrayInit(Coord)(5);
         CoordsTargetingCoord(pos, move->to, pieceMoving.color, PIECE_DATA[pieceMoving.type].move_types, &extraPiecesMovingThere);
 
-        LListFORPTR(Coord, c, extraPiecesMovingThere)
+        for(unsigned int i = 0; i < extraPiecesMovingThere.length; i++)
         {
-            if(CoordEquals(move->from, *c) || (getPieceAtCoord(pos, *c).type != pieceMoving.type)) continue;
-            else if(move->from.row == c->row)   specifyFile = true;
-            else if(move->from.file == c->file) specifyRow = true;
+            Coord c = extraPiecesMovingThere.data[i];
+            if(CoordEquals(move->from, c) || (getPieceAtCoord(pos, c).type != pieceMoving.type)) continue;
+            else if(move->from.row == c.row)   specifyFile = true;
+            else if(move->from.file == c.file) specifyRow = true;
         }
 
-        LListFreeNodes(Coord)(&extraPiecesMovingThere);
+        DarrayFree(Coord)(&extraPiecesMovingThere);
 
         move->algebraicNotation[stringIndex++] = PIECE_DATA[pieceMoving.type].symbol;
     }
@@ -357,7 +366,10 @@ void playMove(const Position *pos, Move *move, Position *newPosition)
 {
     Coord enPassantCache = pos->en_passant;
     *newPosition = *pos;
+
+
     newPosition->en_passant = DEFAULT_INVALID_COORD;
+    newPosition->metadata = NULL;
 
     newPosition->halfmoveClock++;
     if(pos->color_playing == BLACK) newPosition->fullmoveNumber++;
@@ -425,6 +437,8 @@ void playMove(const Position *pos, Move *move, Position *newPosition)
     }
 
     newPosition->color_playing = OTHER_COLOR(newPosition->color_playing);
+
+    if(newPosition == pos) ClearPositionMetadata(pos);
 }
 
 // Return if the move exist on the board. If it does, fill all the move data on *move
@@ -469,22 +483,22 @@ bool doesMoveExist(const Position *pos, Move *move)
 
     }
 
-    LList(Move) moves = MovesFromSquare(pos, move->from);
+    Darray(Move) moves = MovesFromSquare(pos, move->from);
 
     bool moveFound = false;
-    Move *cur;
-    LListFORPTR(Move, cur, moves)
+
+    for(unsigned int i = 0 ; i < moves.length; i++)
     {
-        if(CoordEquals(cur->to, move->to) && move->promotionType == cur->promotionType)
+        if(CoordEquals(moves.data[i].to, move->to) && move->promotionType == moves.data[i].promotionType)
         {
             // Get the move created by the engine (all data)
-            *move = *cur;
+            *move = moves.data[i];
             moveFound = true;
             break;
         }
     }
 
-    LListFreeNodes(Move)(&moves);
+    DarrayFree(Move)(&moves);
 
     return moveFound;
 }
@@ -521,9 +535,9 @@ void DebugPrintMove(const Move* move)
     printf("\n");
 }
 
-LList(Move) MovesFromSquare(const Position *pos, Coord square)
+Darray(Move) MovesFromSquare(const Position *pos, Coord square)
 {
-    LListCreate(Move, moves);
+    Darray(Move) moves = DarrayInit(Move)(15);
 
     Piece pieceAtCurrent = getPieceAtCoord(pos, square);
 
@@ -532,7 +546,11 @@ LList(Move) MovesFromSquare(const Position *pos, Coord square)
     for (MoveType type = 0; type < N_MOVE_TYPES; type++) {
         if (!PIECE_DATA[pieceAtCurrent.type].move_types.types[type]) continue;
 
-        LListExtend(Move)(&moves, MOVE_TYPE_FUNCTION_LOOKUP[type](pos, square, pos->color_playing));
+        Darray(Move) extra = MOVE_TYPE_FUNCTION_LOOKUP[type](pos, square, pos->color_playing);
+
+        DarrayExtend(Move)(&moves, &extra);
+
+        DarrayFree(Move)(&extra);
     }
 
     return moves;

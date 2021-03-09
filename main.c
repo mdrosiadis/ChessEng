@@ -13,14 +13,17 @@ int main() {
     Move pendingMove;
 
 
-    Position fen = CreatePositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Position fen = CreatePositionFromFEN("8/6kp/1pR3p1/8/4P3/2P2KPP/4r1r1/7R b - - 2 26");
 
     PositionState state;
 
     while((state = getPositionState(&fen)) == NORMAL || state == CHECK)
     {
+
+        CreatePositionMetadata(&fen);
         PositionDebugPrint(&fen);
         CreateFENString(&fen);
+
         printf("\n");
 
 
@@ -35,27 +38,13 @@ int main() {
             Move bestmove = GetBestMove(&fen);
 
 
-            LList(Move) moves = getLegalMoves(&fen);
-            Move* move;
-
-            LListFORPTR(Move, move, moves)
-            {
-
-                createMoveString(&fen, move);
-                DebugPrintMove(move);
-
-            }
-
-            LListFreeNodes(Move)(&moves);
-
-
             printf("Playing move: ");
             createMoveString(&fen, &bestmove);
             DebugPrintMove(&bestmove);
+
+
+
             playMove(&fen, &bestmove, &fen);
-
-            // random black player
-
 
 
         }
@@ -70,7 +59,10 @@ int main() {
                         printf("Move is Legal! Move is: ");
                         createMoveString(&fen, &pendingMove);
                         DebugPrintMove(&pendingMove);
+
+
                         playMove(&fen, &pendingMove, &fen);
+
                     } else {
                         printf("Not a legal move!\n");
                     }
