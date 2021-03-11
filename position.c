@@ -121,8 +121,9 @@ Position CreatePositionFromFEN(const char* FEN)
 
     assert(*FEN == ' ');
     FEN++;
+    sscanf(FEN, "%d %d", &newPos.halfmoveClock, &newPos.fullmoveNumber);
 
-    assert(sscanf(FEN, "%d %d", &newPos.halfmoveClock, &newPos.fullmoveNumber) == 2);
+    //assert( == 2);
 
     return newPos;
 }

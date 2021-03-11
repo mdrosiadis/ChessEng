@@ -13,7 +13,7 @@ int main() {
     Move pendingMove;
 
 
-    Position fen = CreatePositionFromFEN("8/6kp/1pR3p1/8/4P3/2P2KPP/4r1r1/7R b - - 2 26");
+    Position fen = CreatePositionFromFEN("r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w kq - 0 6");
 
     PositionState state;
 

@@ -37,7 +37,7 @@ int PositionStaticEvaluation(const Position *pos)
             piece_counts[pieceAtCurrent.color]++;
             materialCount += PIECE_CENTIPAWNS[pieceAtCurrent.type] * colorMultiplier;
 
-            conectivity_score[pieceAtCurrent.color] += CoordsTargetingCoord(pos, current, pieceAtCurrent.color, (MoveTypes){1,1,1,1,1}, NULL);
+            //conectivity_score[pieceAtCurrent.color] += CoordsTargetingCoord(pos, current, pieceAtCurrent.color, (MoveTypes){1,1,1,1,1}, NULL);
 
             if(current.file >= FILE_D &&  current.file <= FILE_E && current.row >= ROW_4 && current.row <= ROW_5)
                 materialCount += PIECE_CENTIPAWNS[pieceAtCurrent.type] * colorMultiplier / 10; // center bonus
@@ -57,25 +57,28 @@ int PositionStaticEvaluation(const Position *pos)
                         if(CoordEquals(kingTarget, current)) attackModifier = 2;
 
                         Piece p = getPieceAtCoord(pos, kingTarget);
-                        if(PieceEquals(p, (Piece){ROOK, pieceAtCurrent.color}))
-                            finalEvaluation += colorMultiplier * 85; // "castling" buff
+                        if(PieceEquals(p, (Piece){ROOK, pieceAtCurrent.color})) finalEvaluation += colorMultiplier * 85; // "castling" buff
+
+                        int attackTotal = 0;
+
+                        if(p.color == OTHER_COLOR(pieceAtCurrent.color))
+                            attackTotal = - COLOR_MULTIPLIER(pieceAtCurrent.color) * PIECE_CENTIPAWNS[p.type];
 
                         Darray(Coord) attackers = DarrayInit(Coord)(10);
                         int attackCount = CoordsTargetingCoord(pos, kingTarget, OTHER_COLOR(pieceAtCurrent.color), (MoveTypes){1,1,1,1,1}, &attackers);
 
 
-                        if(attackCount)
+
+                        for(unsigned int attInd = 0; attInd < attackers.length; attInd++)
                         {
-                            int attackTotal = 0;
-
-                            for(unsigned int attInd = 0; attInd < attackers.length; attInd++)
-                            {
-                                attackTotal += PIECE_CENTIPAWNS[getPieceAtCoord(pos, attackers.data[attInd]).type];
-                            }
-                            attackTotal = - COLOR_MULTIPLIER(pieceAtCurrent.color) * (attackTotal * attackCount / attackModifier);
-
-                            finalEvaluation += attackTotal;
+                            attackTotal += PIECE_CENTIPAWNS[getPieceAtCoord(pos, attackers.data[attInd]).type];
                         }
+
+
+
+                        attackTotal = - COLOR_MULTIPLIER(pieceAtCurrent.color) * (attackTotal * attackCount / (attackModifier * 2));
+
+                        finalEvaluation += attackTotal;
 
                         DarrayFree(Coord)(&attackers);
 
@@ -106,10 +109,10 @@ int PositionStaticEvaluation(const Position *pos)
 
     finalEvaluation += materialCount;
 
-    for(int color = 0; color < 2; color++)
-    {
-        finalEvaluation += COLOR_MULTIPLIER(color) * (int)(((float) conectivity_score[color] / (float) pow(piece_counts[color], 2.0)) * 25);
-    }
+//    for(int color = 0; color < 2; color++)
+//    {
+//        finalEvaluation += COLOR_MULTIPLIER(color) * (int)(((float) conectivity_score[color] / (float) pow(piece_counts[color], 2.0)) * 5);
+//    }
 
     finalEvaluation += COLOR_MULTIPLIER(pos->color_playing) * 25;
 
@@ -156,7 +159,7 @@ static int alphaBetaPruning(const Position *pos, int depth, int alpha, int beta,
 //    printf("Call to alphabeta: depth %d, calls %d\n", depth, calls++);
 
     if(state == CHECKMATE)
-        return COLOR_MULTIPLIER(OTHER_COLOR(pos->color_playing)) * CHECKMATE_SCORE;
+        return COLOR_MULTIPLIER(OTHER_COLOR(pos->color_playing)) * (CHECKMATE_SCORE + depth);
     else if(state == DRAW)
         return 0;
 
@@ -176,57 +179,68 @@ static int alphaBetaPruning(const Position *pos, int depth, int alpha, int beta,
     for(unsigned int i = 0; i < moves.length; i++)
     {
         playMove(pos, &moves.data[i], &sortedResPos.data[i].pos);
+
         sortedResPos.data[i].static_eval = PositionStaticEvaluation(&sortedResPos.data[i].pos);
         sortedResPos.data[i].move = &moves.data[i];
         sortedResPos.length++;
     }
 
-    // TODO: all sort of memory leaks here
+
+    // TODO: all sort of memory leaks here, kinda fixed
 
     int value;
 
     if(pos->color_playing == WHITE)
     {
-        value = -CHECKMATE_SCORE;
+        value = INT_MIN;
+        unsigned int bestInd = 0;
 
         qsort(sortedResPos.data, sortedResPos.length, sizeof(EvalPosPair), PositionInitalSortingComp_white);
-
 
         for(unsigned int i = 0; i < sortedResPos.length; i++)
         {
 
             int bestSearched = alphaBetaPruning(&sortedResPos.data[i].pos, depth-1, alpha, beta, NULL);
 
+            ClearPositionMetadata(&sortedResPos.data[i].pos);
+
             if(bestSearched >= value)
             {
                 value = bestSearched;
-                if(result)
-                    *result = *sortedResPos.data[i].move;
+                bestInd = i;
             }
+
 
             if(value > alpha) alpha = value;
 
             if(alpha >= beta) break;
+
         }
 
+        if(result)
+            *result = *sortedResPos.data[bestInd].move;
 
     }
     else
     {
         qsort(sortedResPos.data, sortedResPos.length, sizeof(EvalPosPair), PositionInitalSortingComp_black);
 
-        value = CHECKMATE_SCORE;
+        value = INT_MAX;
+        unsigned int bestInd = 0;
+
         for(unsigned int i = 0; i < sortedResPos.length; i++)
         {
 
 
             int bestSearched = alphaBetaPruning(&sortedResPos.data[i].pos, depth-1, alpha, beta, NULL);
 
+            ClearPositionMetadata(&sortedResPos.data[i].pos);
+
             if(bestSearched <= value)
             {
                 value = bestSearched;
-                if(result)
-                    *result = *sortedResPos.data[i].move;
+                bestInd = i;
+
             }
 
             if(value < beta) beta = value;
@@ -234,18 +248,21 @@ static int alphaBetaPruning(const Position *pos, int depth, int alpha, int beta,
             if(alpha >= beta) break;
         }
 
+        if(result)
+            *result = *sortedResPos.data[bestInd].move;
     }
 
     DarrayFree(EvalPosPair)(&sortedResPos);
-    DarrayFree(Move)(&moves);
+
     return value;
 }
 
 Move GetBestMove(const Position *pos)
 {
     Move bestmove;
+    int callDepth = 4;
     calls = 0;
-    int eval = alphaBetaPruning(pos, 5, -CHECKMATE_SCORE, CHECKMATE_SCORE, &bestmove);
+    int eval = alphaBetaPruning(pos, callDepth, -CHECKMATE_SCORE, CHECKMATE_SCORE, &bestmove);
     printf("Total calls alphabeta: %d\n", calls++);
     printf("Move eval: %d\n", eval);
 

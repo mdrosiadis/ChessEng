@@ -309,14 +309,20 @@ void createMoveString(const Position* pos, Move* move)
         Coord *c;
         Darray(Coord) extraPiecesMovingThere = DarrayInit(Coord)(5);
         CoordsTargetingCoord(pos, move->to, pieceMoving.color, PIECE_DATA[pieceMoving.type].move_types, &extraPiecesMovingThere);
-
+        int specC = 0;
         for(unsigned int i = 0; i < extraPiecesMovingThere.length; i++)
         {
             Coord c = extraPiecesMovingThere.data[i];
             if(CoordEquals(move->from, c) || (getPieceAtCoord(pos, c).type != pieceMoving.type)) continue;
-            else if(move->from.row == c.row)   specifyFile = true;
-            else if(move->from.file == c.file) specifyRow = true;
+            else
+            {
+                specC++;
+                if(move->from.row == c.row)        specifyFile = true;
+                else if(move->from.file == c.file) specifyRow  = true;
+            }
+
         }
+        if(specC && !specifyFile && !specifyRow) specifyFile = true;
 
         DarrayFree(Coord)(&extraPiecesMovingThere);
 

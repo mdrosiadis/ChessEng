@@ -60,7 +60,7 @@ void DarrayExtend(T)(Darray(T) *dest, const Darray(T) *from)\
 {\
     unsigned int leastNewCap = dest->length + from->length;\
 \
-    if(dest->capacity <= leastNewCap) DarrayRealloc(T)(dest, leastNewCap * 2);\
+    if(dest->capacity <= leastNewCap) DarrayRealloc(T)(dest, leastNewCap);\
 \
     memcpy(dest->data + dest->length, from->data, from->length * sizeof (T));\
 \
